@@ -82,7 +82,7 @@ def getTrainDataloader(config):
     dict config -- the config
     """
     train_set = BaseDataset(
-        csv_dir=config["data"]["train_dir"],
+        csv_path=config["data"]["train_dir"],
         sample_rate=config["data"]["sample_rate"],
         segment=config["data"]["segment"],
     )
@@ -103,7 +103,7 @@ def getEvalDataloader(config):
     dict config -- the config
     """
     eval_set = BaseDataset(
-        csv_dir=config["data"]["valid_dir"],
+        csv_path=config["data"]["valid_dir"],
         sample_rate=config["data"]["sample_rate"],
         segment=config["data"]["segment"],
     )
