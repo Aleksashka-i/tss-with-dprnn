@@ -16,15 +16,15 @@ class Encoder(nn.Module):
     def forward(self, input):
         """
         Input:
-            input: [B, T], B is batch size, T is times
+            input: [B, L], B is batch size, L is times.
         Returns:
-            output: [B, C, T_out]
-            - T_out is the number of time steps
+            output: [B, C, L_out]
+            - L_out is the number of time steps
             - C is out_channels
         """
         output = input
-        output = torch.unsqueeze(output, 1)  # -> [B, 1, T]
-        output = F.relu(self.conv1d(output))  # -> [B, C, T_out]
+        output = torch.unsqueeze(output, 1)  # -> [B, 1, L]
+        output = F.relu(self.conv1d(output))  # -> [B, C, L_out]
         return output
 
 class Decoder(nn.ConvTranspose1d):
@@ -33,4 +33,11 @@ class Decoder(nn.ConvTranspose1d):
         super().__init__(*args, **kwargs)
 
     def forward(self, input):
-        raise NotImplementedError
+        """
+        input: [B, N, L]
+        output: [B, L]
+        """
+        output = input
+        output = super().forward(output)
+        output = torch.squeeze(output)
+        return output
