@@ -1,12 +1,18 @@
 import numpy as np
 import pandas as pd
 
+import os
 import torch
+from torch import hub
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
 import soundfile as sf
 import random as random
+import shutil
+import zipfile
+
+MINI_URL = "https://zenodo.org/record/3871592/files/MiniLibriMix.zip?download=1"
 
 class BaseDataset(Dataset):
     """Base dataset (Libri2Mix) class for DPRNN-TasNet.
@@ -73,6 +79,63 @@ class BaseDataset(Dataset):
         id1, id2 = mixture_path.split("/")[-1].split(".")[0].split("_")
         return mixture, sources, [id1, id2]
 
+    @classmethod
+    def loaders_from_mini(cls, batch_size=4, **kwargs):
+        """Downloads MiniLibriMix and returns train and validation DataLoader.
+        """
+        train_set, val_set = cls.mini_from_download(**kwargs)
+        train_loader = DataLoader(train_set, batch_size=batch_size, drop_last=True)
+        val_loader = DataLoader(val_set, batch_size=batch_size, drop_last=True)
+        return train_loader, val_loader
+
+    @classmethod
+    def mini_from_download(cls, **kwargs):
+        """Downloads MiniLibriMix and returns train and validation Dataset.
+        """
+        assert "csv_dir" not in kwargs, "Cannot specify csv_dir when downloading."
+        assert kwargs.get("task", "sep_clean") in [
+            "sep_clean",
+            "sep_noisy",
+        ], "Only clean and noisy separation are supported in MiniLibriMix."
+        assert (
+            kwargs.get("sample_rate", 8000) == 8000
+        ), "Only 8kHz sample rate is supported in MiniLibriMix."
+        # Download LibriMix in current directory
+        meta_path = cls.mini_download()
+        print(meta_path)
+        # Create dataset instances
+        train_set = cls(os.path.join(meta_path, "train/mixture_train_mix_clean.csv"), sample_rate=8000)
+        val_set = cls(os.path.join(meta_path, "val/mixture_val_mix_clean.csv"), sample_rate=8000)
+        return train_set, val_set
+    
+    @staticmethod
+    def mini_download():
+        """Downloads MiniLibriMix from Zenodo in current directory
+        Returns:
+            The path to the metadata directory.
+        """
+        mini_dir = "./MiniLibriMix/"
+        os.makedirs(mini_dir, exist_ok=True)
+        # Download zip (or cached)
+        zip_path = mini_dir + "MiniLibriMix.zip"
+        if not os.path.isfile(zip_path):
+            hub.download_url_to_file(MINI_URL, zip_path)
+        # Unzip zip
+        cond = all([os.path.isdir("MiniLibriMix/" + f) for f in ["train", "val", "metadata"]])
+        if not cond:
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                zip_ref.extractall("./")  # Will unzip in MiniLibriMix
+        # Reorder metadata
+        src = "MiniLibriMix/metadata/"
+        for mode in ["train", "val"]:
+            dst = f"MiniLibriMix/metadata/{mode}/"
+            os.makedirs(dst, exist_ok=True)
+            [
+                shutil.copyfile(src + f, dst + f)
+                for f in os.listdir(src)
+                if mode in f and os.path.isfile(src + f)
+            ]
+        return "./MiniLibriMix/metadata"
 
 def getTrainDataloader(config):
     """Returns a DataLoader object based on the given config (train version).

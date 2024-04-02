@@ -166,8 +166,8 @@ class DPRNN(nn.Module):
 
            K: length of chunks
            P: hop size
-           input: [B, N(input_size), L]
-           output: [B, N(input_size), K, S]
+           input: [B, N(feature_size), L]
+           output: [B, N(feature_size), K, S]
         '''
         B, _, _ = input.size()
         output = input
@@ -178,7 +178,7 @@ class DPRNN(nn.Module):
             stride=(self.hop_length, 1),
         )
         n_chunks = output.shape[-1]
-        output = output.reshape(B, self.input_size, self.chunk_length, n_chunks)
+        output = output.reshape(B, self.feature_size, self.chunk_length, n_chunks)
         return output, n_chunks
 
     
@@ -219,16 +219,18 @@ class DPRNNTasNet(nn.Module):
         dropout: float, default: 0.
         bidirectional: bool, default: False.
         stride: int.
-        sample_rate: float.
     '''
     def __init__(self, input_size, output_size=None, feature_size=128, hidden_size=128, chunk_length=200,
                  kernel_size=2, hop_length=None, n_repeats=6, bidirectional=True, rnn_type='LSTM',
                  dropout=0, stride=None):
         super().__init__()
         self.output_size = output_size if output_size is not None else input_size
+        self.stride = stride if stride is not None else kernel_size // 2
         self.encoder = Encoder(
             kernel_size, 
-            input_size
+            input_size,
+            stride=self.stride,
+            bias=False,
         )
         self.separation = DPRNN(
             input_size,
@@ -246,7 +248,7 @@ class DPRNNTasNet(nn.Module):
             in_channels=output_size,
             out_channels=1,
             kernel_size=kernel_size,
-            stride=stride,
+            stride=self.stride,
             bias=False,
         )
     
@@ -255,7 +257,7 @@ class DPRNNTasNet(nn.Module):
            input: [B, L]
         '''
         encoders = self.encoder(input) # -> [B, N, L]
-        masks = self.separation(encoders) # [2, B, N, L]
-        output = [masks[i] * encoders for i in range(2)]
-        mixtures = [self.decoder(output[i]) for i in range(2)]
+        masks = self.separation(encoders) # -> [2, B, N, L]
+        output = [masks[i] * encoders for i in range(2)] # -> [2, B, N, L]
+        mixtures = [self.decoder(output[i]) for i in range(2)] # -> [2, B, L]
         return mixtures

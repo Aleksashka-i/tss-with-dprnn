@@ -7,24 +7,34 @@ class Encoder(nn.Module):
 
     Args:
         kernel_size: int.
-        out_channels: int.
+        output_size: int.
+        stride: int.
+        bias: bool.
     """
-    def __init__(self, kernel_size, output_size):
+    def __init__(self, kernel_size, output_size, stride, bias=False):
         super().__init__()
-        self.conv1d = nn.Conv1d(1, output_size, kernel_size, stride=kernel_size // 2, bias=False)
+        self.conv1d = nn.Conv1d(
+            in_channels=1,
+            out_channels=output_size,
+            kernel_size=kernel_size,
+            stride=stride,
+            groups=1,
+            bias=bias
+        )
 
     def forward(self, input):
         """
         Input:
             input: [B, L], B is batch size, L is times.
         Returns:
-            output: [B, C, L_out]
-            - L_out is the number of time steps
-            - C is out_channels
+            output: [B, C, L_out]:
+            - L_out is the number of time steps.
+            - C is ouput_size.
         """
         output = input
         output = torch.unsqueeze(output, 1)  # -> [B, 1, L]
-        output = F.relu(self.conv1d(output))  # -> [B, C, L_out]
+        output = self.conv1d(output)
+        output = F.relu(output)  # -> [B, C, L_out]
         return output
 
 class Decoder(nn.ConvTranspose1d):

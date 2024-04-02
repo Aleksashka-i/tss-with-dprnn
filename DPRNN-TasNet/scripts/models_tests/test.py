@@ -1,10 +1,10 @@
-import hydra
-from omegaconf import DictConfig, OmegaConf
-
 import sys
 sys.path.append('../../')
 
-@hydra.main(version_base=None, config_path='./', config_name='dprnntasnet_config')
+import hydra
+from omegaconf import DictConfig, OmegaConf
+
+@hydra.main(version_base=None, config_path='./', config_name='config')
 def main(config: DictConfig):
     OmegaConf.resolve(config)
 

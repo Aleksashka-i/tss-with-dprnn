@@ -1,0 +1,33 @@
+---
+name: MiniTrain
+
+model:
+  _target_: src.models.dprnn.DPRNNTasNet
+  input_size: 64
+  output_size: 64
+  feature_size: 128
+  hidden_size: 128
+  chunk_length: 250
+  kernel_size: 2
+  hop_length: 125
+  n_repeats: 6
+  bidirectional: True
+  dropout: 0
+
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 0.001
+  weight_decay: 0
+
+lrScheduler:
+  min_lr: !!float 1e-8
+  patience: 2
+  factor: 0.5
+
+print_freq: 1
+clip_norm: 5
+epochs: 10
+
+checkpointPath: null
+nCheckpoints: 100
+newCheckpointsPath: ./chkpts
