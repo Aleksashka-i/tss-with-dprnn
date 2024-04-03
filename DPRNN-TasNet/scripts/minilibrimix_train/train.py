@@ -7,7 +7,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 
 from src.datasets.base import BaseDataset
-from src.trainers.dprnntasnet_trainer import Trainer
+from src.trainers.trainer import Trainer
 
 @hydra.main(version_base=None, config_path='./', config_name='config')
 def main(config: DictConfig):

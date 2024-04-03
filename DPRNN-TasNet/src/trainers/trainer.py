@@ -27,9 +27,7 @@ class Trainer(object):
         else:
             self.logger.info('CUDA is unavailable, using CPU for computations.')
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-        # metrics and loss???
-
+        
         # model
         self.model = model.to(self.device)
 
