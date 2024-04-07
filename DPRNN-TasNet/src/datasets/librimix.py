@@ -1,20 +1,21 @@
+import os
+import random
+import shutil
+import zipfile
+
 import numpy as np
 import pandas as pd
 
-import os
 import torch
 from torch import hub
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
 import soundfile as sf
-import random as random
-import shutil
-import zipfile
 
 MINI_URL = "https://zenodo.org/record/3871592/files/MiniLibriMix.zip?download=1"
 
-class BaseDataset(Dataset):
+class Librimix(Dataset):
     """Base dataset (Libri2Mix) class for DPRNN-TasNet.
 
     Args:
@@ -23,14 +24,17 @@ class BaseDataset(Dataset):
         segment (int, optional): The desired sources and mixtures length in s.
         return_id (bool): If True, returns mixture ID. Default is False.
     """
-    def __init__(self, csv_path, sample_rate, segment=3, return_id=False):
+    def __init__(self, csv_path, sample_rate, nrows = None, segment=3, return_id=False):
         self.csv_path = csv_path
         self.sample_rate = sample_rate
         self.segment = segment
         self.return_id = return_id
         self.n_src = 2
         # Open csv file
-        self.df = pd.read_csv(self.csv_path)
+        if nrows is None:
+            self.df = pd.read_csv(self.csv_path)
+        else:
+            self.df = pd.read_csv(self.csv_path, nrows=nrows)
          # Get rid of the utterances too short
         if self.segment is not None:
             max_len = len(self.df)
@@ -43,10 +47,10 @@ class BaseDataset(Dataset):
             )
         else:
             self.seg_len = None
-        
+
     def __len__(self):
         return len(self.df)
-    
+
     def __getitem__(self, idx):
         # Get the row in dataframe
         row = self.df.iloc[idx]
@@ -80,16 +84,16 @@ class BaseDataset(Dataset):
         return mixture, sources, [id1, id2]
 
     @classmethod
-    def loaders_from_mini(cls, batch_size=4, **kwargs):
+    def loaders_from_mini(cls, batch_size=4, nrows=None, **kwargs):
         """Downloads MiniLibriMix and returns train and validation DataLoader.
         """
-        train_set, val_set = cls.mini_from_download(**kwargs)
+        train_set, val_set = cls.mini_from_download(nrows=nrows, **kwargs)
         train_loader = DataLoader(train_set, batch_size=batch_size, drop_last=True)
         val_loader = DataLoader(val_set, batch_size=batch_size, drop_last=True)
         return train_loader, val_loader
 
     @classmethod
-    def mini_from_download(cls, **kwargs):
+    def mini_from_download(cls, nrows=None, **kwargs):
         """Downloads MiniLibriMix and returns train and validation Dataset.
         """
         assert "csv_dir" not in kwargs, "Cannot specify csv_dir when downloading."
@@ -104,10 +108,12 @@ class BaseDataset(Dataset):
         meta_path = cls.mini_download()
         print(meta_path)
         # Create dataset instances
-        train_set = cls(os.path.join(meta_path, "train/mixture_train_mix_clean.csv"), sample_rate=8000)
-        val_set = cls(os.path.join(meta_path, "val/mixture_val_mix_clean.csv"), sample_rate=8000)
+        train_set = cls(os.path.join(meta_path, "train/mixture_train_mix_clean.csv"),
+                        sample_rate=8000, nrows=nrows)
+        val_set = cls(os.path.join(meta_path, "val/mixture_val_mix_clean.csv"),
+                      sample_rate=8000, nrows=nrows)
         return train_set, val_set
-    
+
     @staticmethod
     def mini_download():
         """Downloads MiniLibriMix from Zenodo in current directory
@@ -121,7 +127,7 @@ class BaseDataset(Dataset):
         if not os.path.isfile(zip_path):
             hub.download_url_to_file(MINI_URL, zip_path)
         # Unzip zip
-        cond = all([os.path.isdir("MiniLibriMix/" + f) for f in ["train", "val", "metadata"]])
+        cond = all(os.path.isdir("MiniLibriMix/" + f) for f in ["train", "val", "metadata"])
         if not cond:
             with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall("./")  # Will unzip in MiniLibriMix
@@ -137,16 +143,17 @@ class BaseDataset(Dataset):
             ]
         return "./MiniLibriMix/metadata"
 
-def getTrainDataloader(config):
+def get_train_dataloader(config):
     """Returns a DataLoader object based on the given config (train version).
 
     Parameters
     ----------
     dict config -- the config
     """
-    train_set = BaseDataset(
+    train_set = Librimix(
         csv_path=config["data"]["train_dir"],
         sample_rate=config["data"]["sample_rate"],
+        nrows=config["data"]["nrows"],
         segment=config["data"]["segment"],
     )
     train_loader = DataLoader(
@@ -158,16 +165,17 @@ def getTrainDataloader(config):
     )
     return train_loader
 
-def getEvalDataloader(config):
+def get_eval_dataloader(config):
     """Returns a DataLoader object based on the given config (eval version).
 
     Parameters
     ----------
     dict config -- the config
     """
-    eval_set = BaseDataset(
+    eval_set = Librimix(
         csv_path=config["data"]["valid_dir"],
         sample_rate=config["data"]["sample_rate"],
+        nrows=config["data"]["nrows"],
         segment=config["data"]["segment"],
     )
     eval_loader = DataLoader(
