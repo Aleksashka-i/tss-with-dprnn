@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.nn.functional import fold, unfold
 from src.models.encoder_decoder import Encoder, Decoder
+from src.models import norms
 
 class SingleRNN(nn.Module):
     ''' Single RNN layer.
@@ -47,8 +48,10 @@ class DPRNNBlock(nn.Module):
         bidirectional: bool, default: False.
     '''
 
-    def __init__(self, rnn_type, feature_size, hidden_size, dropout=0, bidirectional=True):
+    def __init__(self, rnn_type, feature_size, hidden_size,
+                 norm_type='gLN', dropout=0, bidirectional=True):
         super().__init__()
+        print(norm_type)
 
         self.intra_rnn = SingleRNN(
             rnn_type,
@@ -58,7 +61,6 @@ class DPRNNBlock(nn.Module):
             bidirectional=True, # always bi-directional
         )
         self.intra_linear = nn.Linear(self.intra_rnn.output_size(), feature_size)
-        self.intra_norm = nn.GroupNorm(1, feature_size)
 
         self.inter_rnn = SingleRNN(
             rnn_type,
@@ -68,7 +70,13 @@ class DPRNNBlock(nn.Module):
             bidirectional=bidirectional,
         )
         self.inter_linear = nn.Linear(self.inter_rnn.output_size(), feature_size)
-        self.inter_norm = nn.GroupNorm(1, feature_size)
+
+        if norm_type == 'gLN':
+            self.intra_norm = norms.GlobLN(feature_size)
+            self.inter_norm = norms.GlobLN(feature_size)
+        else:
+            self.intra_norm = nn.GroupNorm(1, feature_size)
+            self.inter_norm = nn.GroupNorm(1, feature_size)
 
     def forward(self, input):
         ''' input: [B, N, K, S] '''
@@ -104,10 +112,12 @@ class DPRNN(nn.Module):
     '''
     def __init__(self, input_size, output_size=None, feature_size=128,
                  hidden_size=128, chunk_length=200, hop_length=None,
-                 n_repeats=6, bidirectional=True, rnn_type='LSTM', dropout=0):
+                 n_repeats=6, bidirectional=True, rnn_type='LSTM',
+                 norm_type='gLN', activation_type='sigmoid', dropout=0):
         super().__init__()
-        self.input_size = input_size
+        print(norm_type, activation_type)
         self.output_size = output_size if output_size is not None else input_size
+        self.input_size = input_size
         self.feature_size = feature_size
         # length of chunk in segmentation
         self.chunk_length = chunk_length
@@ -115,8 +125,11 @@ class DPRNN(nn.Module):
         self.hop_length = hop_length if hop_length is not None else chunk_length // 2
 
         # bottleneck
-        linear_norm = nn.GroupNorm(1, input_size, eps=1e-8)
-        start_conv1d = nn.Conv1d(input_size, feature_size, 1, bias=False)
+        if norm_type == 'gLN':
+            linear_norm = norms.GlobLN(input_size)
+        else:
+            linear_norm = nn.GroupNorm(1, input_size)
+        start_conv1d = nn.Conv1d(input_size, feature_size, 1)
         self.bottleneck = nn.Sequential(linear_norm, start_conv1d)
 
         # stack dprnn blocks
@@ -127,6 +140,7 @@ class DPRNN(nn.Module):
                     rnn_type=rnn_type,
                     feature_size=feature_size,
                     hidden_size=hidden_size,
+                    norm_type=norm_type,
                     dropout=dropout,
                     bidirectional=bidirectional,
                 )
@@ -141,8 +155,11 @@ class DPRNN(nn.Module):
         self.out = nn.Sequential(nn.Conv1d(feature_size, feature_size, 1), nn.Tanh())
         self.gate = nn.Sequential(nn.Conv1d(feature_size, feature_size, 1), nn.Sigmoid())
 
-        self.end_conv1x1 = nn.Conv1d(feature_size, self.output_size, 1, bias=False)
-        self.activation = nn.ReLU()
+        self.end_conv1x1 = nn.Conv1d(feature_size, output_size, 1, bias=False)
+        if activation_type == 'sigmoid':
+            self.activation = nn.Sigmoid()
+        else:
+            self.activation = nn.ReLU()
 
     def forward(self, input):
         ''' input: [B, N(input_size), L] '''
@@ -162,11 +179,9 @@ class DPRNN(nn.Module):
         output = self.out(output) * self.gate(output)
         output = self.end_conv1x1(output)
         # -> [2 * B, N(output_size), L]
+        output = self.activation(output)
         output = output.reshape(B, 2, self.output_size, L)
         # -> [B, 2, N(output_size), L]
-        output = self.activation(output)
-        output = output.transpose(0, 1)
-        # -> [2, B, N(output_size), L]
         return output
 
     def _segmentation(self, input):
@@ -176,9 +191,8 @@ class DPRNN(nn.Module):
             output: [B, N(feature_size), K, S]
         '''
         B, _, _ = input.size()
-        output = input
         output = unfold(
-            output.unsqueeze(-1),
+            input.unsqueeze(-1),
             kernel_size=(self.chunk_length, 1),
             padding=(self.chunk_length, 0),
             stride=(self.hop_length, 1),
@@ -186,7 +200,6 @@ class DPRNN(nn.Module):
         n_chunks = output.shape[-1]
         output = output.reshape(B, self.feature_size, self.chunk_length, n_chunks)
         return output, n_chunks
-
 
     def _overlap_add(self, input, L):
         ''' Overlap-add stage.
@@ -225,7 +238,7 @@ class DPRNNTasNet(nn.Module):
     def __init__(self, input_size, output_size=None, feature_size=128,
                  hidden_size=128, chunk_length=200, kernel_size=2,
                  hop_length=None, n_repeats=6, bidirectional=True,
-                 rnn_type='LSTM', dropout=0, stride=None):
+                 rnn_type='LSTM', norm_type='gLN', activation_type='sigmoid', dropout=0, stride=None):
         super().__init__()
         self.output_size = output_size if output_size is not None else input_size
         self.stride = stride if stride is not None else kernel_size // 2
@@ -245,6 +258,8 @@ class DPRNNTasNet(nn.Module):
             n_repeats,
             bidirectional,
             rnn_type,
+            norm_type,
+            activation_type,
             dropout,
         )
         self.decoder = Decoder(
@@ -258,9 +273,8 @@ class DPRNNTasNet(nn.Module):
     def forward(self, input):
         ''' input: [B, L] '''
         encoders = self.encoder(input) # -> [B, N, L]
-        masks = self.separation(encoders) # -> [2, B, N, L]
-        output = [masks[i] * encoders for i in range(2)] # -> [2, B, N, L]
-        mixtures = [self.decoder(output[i]) for i in range(2)] # -> [2, B, L]
-        mixtures = torch.stack(mixtures, dim=0)
-        mixtures = mixtures.transpose(0, 1) # -> [B, 2, L]
+        masks = self.separation(encoders) # -> [B, 2, N, L]
+        output = masks * encoders.unsqueeze(1)  # -> [B, 2, N, L]
+        mixtures = [self.decoder(output[:, i, :, :]) for i in range(2)] # [B, 2, L]
+        mixtures = torch.stack(mixtures, dim=1) # [B, 2, L]
         return mixtures

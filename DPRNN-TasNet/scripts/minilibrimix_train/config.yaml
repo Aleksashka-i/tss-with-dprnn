@@ -12,17 +12,19 @@ model:
   hop_length: 125
   n_repeats: 6
   bidirectional: True
+  norm_type: ln
+  activation_type: sigmoid
   dropout: 0
 
 optimizer:
   _target_: torch.optim.Adam
   lr: 0.001
-  weight_decay: 0
+  weight_decay: !!float 1e-5
 
 lr_scheduler:
-  min_lr: !!float 1e-8
-  patience: 2
+  patience: 5
   factor: 0.5
+  decay_rate: 0.96
 
 logs:
   metadata: 
@@ -32,14 +34,16 @@ logs:
   wandb_credentials:
     wandb_project: DPRNN-TasNet
     wandb_entity: aleksashka
-    wandb_key:
+    wandb_key: 
     run_name: report
 
 print_freq: 1
 clip_norm: 5
-epochs: 5
-early_stop: 20
+epochs: 10
+early_stop: 100
 sample_rate: 8000
+batch_size: 2
+is_metrics: False
 
 checkpoint_path: null
 n_checkpoints: 100

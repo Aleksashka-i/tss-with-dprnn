@@ -18,8 +18,8 @@ def main(config: DictConfig):
 
     logger.info('RUN %s', config['name'])
     logger.info('Initializing Datasets and Dataloaders (MiniLibriMix)....')
-    _, val_set = Librimix.mini_from_download(nrows=2)
-    train_dataloader, test_dataloader = Librimix.loaders_from_mini(batch_size=2, nrows=2)
+    _, val_set  = Librimix.mini_from_download(nrows=2)
+    train_dataloader, test_dataloader = Librimix.loaders_from_mini(config['batch_size'], nrows=2)
     logger.info('OK')
     logger.info(str(len(train_dataloader)))
 

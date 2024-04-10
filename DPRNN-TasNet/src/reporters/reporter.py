@@ -47,16 +47,18 @@ class Reporter:
         if self.mode == 'train':
             self.logger.info('TRAIN LOGS!')
             wandb.log(self.wandb_format_number('loss', logs['loss']), step=logs['step'])
-            metrics = logs['metrics']
-            for metric in logs['metrics']:
-                wandb.log(self.wandb_format_number(metric, metrics[metric]), step=logs['step'])
+            if logs['metrics'] is not None:
+                metrics = logs['metrics']
+                for metric in logs['metrics']:
+                    wandb.log(self.wandb_format_number(metric, metrics[metric]), step=logs['step'])
 
         if self.mode == 'eval':
             self.logger.info('EVAL LOGS!')
             wandb.log(self.wandb_format_number('loss', logs['loss']), step=logs['step'])
-            metrics = logs['metrics']
-            for metric in logs['metrics']:
-                wandb.log(self.wandb_format_number(metric, metrics[metric]), step=logs['step'])
+            if logs['metrics'] is not None:
+                metrics = logs['metrics']
+                for metric in logs['metrics']:
+                    wandb.log(self.wandb_format_number(metric, metrics[metric]), step=logs['step'])
 
         if self.mode == 'inference':
             self.logger.info('INFERENCE!')
