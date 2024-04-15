@@ -51,7 +51,7 @@ class DPRNNBlock(nn.Module):
     def __init__(self, rnn_type, feature_size, hidden_size,
                  norm_type='gLN', dropout=0, bidirectional=True):
         super().__init__()
-        print(norm_type)
+        print(norm_type, flush=True)
 
         self.intra_rnn = SingleRNN(
             rnn_type,
@@ -115,7 +115,7 @@ class DPRNN(nn.Module):
                  n_repeats=6, bidirectional=True, rnn_type='LSTM',
                  norm_type='gLN', activation_type='sigmoid', dropout=0):
         super().__init__()
-        print(norm_type, activation_type)
+        print(norm_type, activation_type, flush=True)
         self.output_size = output_size if output_size is not None else input_size
         self.input_size = input_size
         self.feature_size = feature_size

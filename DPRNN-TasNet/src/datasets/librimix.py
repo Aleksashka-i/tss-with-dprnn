@@ -43,7 +43,8 @@ class Librimix(Dataset):
             self.df = self.df[self.df["length"] >= self.seg_len]
             print(
                 f"Drop {max_len - len(self.df)} utterances from {max_len} "
-                f"(shorter than {segment} seconds)"
+                f"(shorter than {segment} seconds)",
+                flush=True
             )
         else:
             self.seg_len = None
@@ -106,7 +107,7 @@ class Librimix(Dataset):
         ), "Only 8kHz sample rate is supported in MiniLibriMix."
         # Download LibriMix in current directory
         meta_path = cls.mini_download()
-        print(meta_path)
+        print(meta_path, flush=True)
         # Create dataset instances
         train_set = cls(os.path.join(meta_path, "train/mixture_train_mix_clean.csv"),
                         sample_rate=8000, nrows=nrows)
@@ -151,9 +152,9 @@ def get_train_dataloader(config):
     dict config -- the config
     """
     train_set = Librimix(
-        csv_path=config["data"]["train_dir"],
-        sample_rate=config["data"]["sample_rate"],
-        nrows=config["data"]["nrows"],
+        csv_path=config["data"]["train_path"],
+        sample_rate=config["sample_rate"],
+        nrows=config["data"]["nrows_train"],
         segment=config["data"]["segment"],
     )
     train_loader = DataLoader(
@@ -163,7 +164,7 @@ def get_train_dataloader(config):
         num_workers=config["training"]["num_workers"],
         drop_last=True,
     )
-    return train_loader
+    return train_set, train_loader
 
 def get_eval_dataloader(config):
     """Returns a DataLoader object based on the given config (eval version).
@@ -173,9 +174,9 @@ def get_eval_dataloader(config):
     dict config -- the config
     """
     eval_set = Librimix(
-        csv_path=config["data"]["valid_dir"],
-        sample_rate=config["data"]["sample_rate"],
-        nrows=config["data"]["nrows"],
+        csv_path=config["data"]["valid_path"],
+        sample_rate=config["sample_rate"],
+        nrows=config["data"]["nrows_valid"],
         segment=config["data"]["segment"],
     )
     eval_loader = DataLoader(
@@ -185,4 +186,4 @@ def get_eval_dataloader(config):
         num_workers=config["training"]["num_workers"],
         drop_last=True,
     )
-    return eval_loader
+    return eval_set, eval_loader

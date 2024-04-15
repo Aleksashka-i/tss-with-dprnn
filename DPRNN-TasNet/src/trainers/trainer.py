@@ -224,7 +224,7 @@ class Trainer:
     def run(self, train_loader, test_loader, n_epochs=50, early_stop=10):
         ''' Run. '''
         self.save_checkpoint(best=False)
-        best_loss = self.eval(test_loader)
+        best_loss = 100500
 
         train_losses = []
         eval_losses = []

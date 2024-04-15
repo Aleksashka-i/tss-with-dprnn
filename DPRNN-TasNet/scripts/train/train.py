@@ -4,9 +4,9 @@ import hydra
 
 from omegaconf import DictConfig, OmegaConf
 
-sys.path.append('../../')
+sys.path.append('../..')
 
-from src.datasets.librimix import Librimix
+from src.datasets.librimix import get_train_dataloader, get_eval_dataloader
 from src.trainers.trainer import Trainer
 from src.reporters.reporter import Reporter
 
@@ -18,11 +18,11 @@ def main(config: DictConfig):
 
     logger.info('RUN %s', config['name'])
     logger.info('Initializing Datasets and Dataloaders (MiniLibriMix)....')
-    _, val_set  = Librimix.mini_from_download(nrows=2)
-    train_dataloader, test_dataloader = Librimix.loaders_from_mini(config['batch_size'], nrows=2)
+    _, train_dataloader = get_train_dataloader(config)
+    val_set, test_dataloader  = get_eval_dataloader(config)
     logger.info('OK')
-    logger.info(str(len(train_dataloader)))
-
+    logger.info(str(len(train_dataloader) + len(test_dataloader)))
+    
     logger.info('Initializing data for reporter....')
     eval_mixtures = {}
     for id_ in config['logs']['metadata']['ids']:
@@ -38,7 +38,7 @@ def main(config: DictConfig):
     if len(val_set) == 0:
         logger.info('No mixtures were added for inference.')
     else:
-        logger.info('{} mixtures were added for inference.'.format(len(val_set)))
+        logger.info('{} mixtures were added for inference.'.format(config['logs']['metadata']['ids']))
     logger.info('OK')
 
     logger.info('Initializing reporter....')
