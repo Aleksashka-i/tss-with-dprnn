@@ -1,16 +1,14 @@
 ---
-name: MiniTrain
+name: Train
 
 data:
-  train_path: Libri2Mix/wav8k/min/metadata/mixture_train-100_mix_clean.csv
-  valid_path: Libri2Mix/wav8k/min/metadata/mixture_dev_mix_clean.csv
-  nrows_train: 1
-  nrows_valid: 1
+  train_path: ../../Libri2Mix/wav8k/min/metadata/mixture_train-100_mix_clean.csv
+  valid_path: ../../Libri2Mix/wav8k/min/metadata/mixture_dev_mix_clean.csv
+  nrows_train: 5000
+  nrows_valid: 1000
   segment: 3
-
-training:
-  num_workers: 4
-  batch_size: 1
+  num_workers: 2
+  batch_size: 5
 
 model:
   _target_: src.models.dprnn.DPRNNTasNet
@@ -44,16 +42,17 @@ logs:
   wandb_credentials:
     wandb_project: DPRNN-TasNet
     wandb_entity: aleksashka
-    wandb_key: d9c095aeb842cfdea791b21bc5ed65a02e4e6af5
+    wandb_key: 3f192eeaa766330c826f632edcd5c5e07caf25fc
     run_name: report
 
-print_freq: 1
+print_freq: 10
 clip_norm: 5
+cur_epoch: 0
 epochs: 1
 early_stop: 100
 sample_rate: 8000
 is_metrics: False
 
 checkpoint_path: null
-n_checkpoints: 100
-new_checkpoints_path: ./chkpts
+n_checkpoints: 1000
+new_checkpoints_path: ../../chkpts

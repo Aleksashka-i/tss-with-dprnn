@@ -1,24 +1,22 @@
 import os
-import sys
 import time
 from collections import deque
+
+from asteroid.losses import pairwise_neg_sisdr, PITLossWrapper
+from asteroid.metrics import get_metrics
+
 import hydra
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau, ExponentialLR
 
-sys.path.append('../../')
-
 from src.reporters.reporter import Reporter
-
-from asteroid.losses import pairwise_neg_sisdr, PITLossWrapper
-from asteroid.metrics import get_metrics
 
 class Trainer:
     ''' Trainer class. '''
     def __init__(self, model, logger, eval_mixtures, reporter: Reporter, config):
         self.logger = logger
         self.reporter = reporter
-        self.cur_epoch = 0
+        self.cur_epoch = config['cur_epoch']
         self.print_freq = config['print_freq']
         self.eval_mixtures = eval_mixtures # displayed in audio inference table in wandb
         self.sample_rate = config['sample_rate']
@@ -114,8 +112,13 @@ class Trainer:
                 for mix_, target_, est_ in zip(mix, ref, reordered_sources):
                     metric_cnt += 1
                     mix_ = mix_.reshape((1, ) + mix_.shape)
-                    cur_metrics_dict = get_metrics(mix_, target_, est_, sample_rate=self.sample_rate,
-                                               metrics_list=self.metrics)
+                    cur_metrics_dict = get_metrics(
+                        mix_,
+                        target_,
+                        est_,
+                        sample_rate=self.sample_rate,
+                        metrics_list=self.metrics
+                    )
                     metric_dict = {metric: metric_dict[metric] + cur_metrics_dict[metric]
                                for metric in self.metrics}
 
@@ -185,8 +188,13 @@ class Trainer:
                     for mix_, target_, est_ in zip(mix, ref, reordered_sources):
                         metric_cnt += 1
                         mix_ = mix_.reshape((1, ) + mix_.shape)
-                        cur_metrics_dict = get_metrics(mix_, target_, est_, sample_rate=self.sample_rate,
-                                                   metrics_list=self.metrics)
+                        cur_metrics_dict = get_metrics(
+                            mix_,
+                            target_,
+                            est_,
+                            sample_rate=self.sample_rate,
+                            metrics_list=self.metrics
+                        )
                         metric_dict = {metric: metric_dict[metric] + cur_metrics_dict[metric]
                                    for metric in self.metrics}
 
@@ -221,9 +229,8 @@ class Trainer:
         self.logger.info(message)
         return total_loss
 
-    def run(self, train_loader, test_loader, n_epochs=50, early_stop=10):
+    def run(self, train_loader, eval_loader, n_epochs=50, early_stop=10):
         ''' Run. '''
-        self.save_checkpoint(best=False)
         best_loss = 100500
 
         train_losses = []
@@ -235,7 +242,7 @@ class Trainer:
             self.cur_epoch += 1
 
             train_loss = self.train(train_loader)
-            eval_loss = self.eval(test_loader)
+            eval_loss = self.eval(eval_loader)
 
             train_losses.append(train_loss)
             eval_losses.append(eval_loss)
@@ -277,7 +284,7 @@ class Trainer:
                                        mix_id['s2_target'].unsqueeze(0)])
                 sources = sources.transpose(0, 1)
                 sources = sources.to(self.device)
-                _, reordered_sources = self.loss_module(out, sources, return_est=True) # normalize estimates??
+                _, reordered_sources = self.loss_module(out, sources, return_est=True)
                 reordered_sources = reordered_sources.squeeze(0)
                 self.eval_mixtures[id]['s1_estimated'] = reordered_sources[0]
                 self.eval_mixtures[id]['s2_estimated'] = reordered_sources[1]

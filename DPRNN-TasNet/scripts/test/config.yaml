@@ -1,0 +1,27 @@
+---
+name: Test
+
+data:
+  test_path: ../../Libri2Mix/wav8k/min/metadata/mixture_test_mix_clean.csv
+  nrows_test: 1000
+  segment: null
+
+model:
+  _target_: src.models.dprnn.DPRNNTasNet
+  input_size: 64
+  output_size: 64
+  feature_size: 128
+  hidden_size: 128
+  chunk_length: 250
+  kernel_size: 2
+  hop_length: 125
+  n_repeats: 6
+  bidirectional: True
+  norm_type: ln
+  activation_type: sigmoid
+  dropout: 0
+
+sample_rate: 8000
+
+checkpoint_path: ../../chkpts/*.pt
+test_savedir: ../../metrics

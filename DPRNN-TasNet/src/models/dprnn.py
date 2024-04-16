@@ -238,7 +238,8 @@ class DPRNNTasNet(nn.Module):
     def __init__(self, input_size, output_size=None, feature_size=128,
                  hidden_size=128, chunk_length=200, kernel_size=2,
                  hop_length=None, n_repeats=6, bidirectional=True,
-                 rnn_type='LSTM', norm_type='gLN', activation_type='sigmoid', dropout=0, stride=None):
+                 rnn_type='LSTM', norm_type='gLN', activation_type='sigmoid',
+                 dropout=0, stride=None):
         super().__init__()
         self.output_size = output_size if output_size is not None else input_size
         self.stride = stride if stride is not None else kernel_size // 2
