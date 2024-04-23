@@ -1,12 +1,14 @@
 ---
-name: Train
+name: train
 
 data:
-  train_path: ../../Libri2Mix/wav8k/min/metadata/mixture_train-100_mix_clean.csv
-  valid_path: ../../Libri2Mix/wav8k/min/metadata/mixture_dev_mix_clean.csv
-  nrows_train: 5000
-  nrows_valid: 1000
-  segment: 3
+  use_generated_train: ../../datasets/train_set.pkl
+  use_generated_eval: ../../datasets/eval_set.pkl
+  train_path: 
+  eval_path:
+  nrows_train:
+  nrows_eval:
+  segment:
   num_workers: 2
   batch_size: 5
 
@@ -27,7 +29,7 @@ model:
 
 optimizer:
   _target_: torch.optim.Adam
-  lr: 0.001
+  lr: 0.0005
   weight_decay: !!float 1e-5
 
 lr_scheduler:
@@ -38,21 +40,23 @@ lr_scheduler:
 logs:
   metadata: 
     ids:
-      - 0
+      - 14
+      - 516
+      - 2901
   wandb_credentials:
     wandb_project: DPRNN-TasNet
     wandb_entity: aleksashka
-    wandb_key: 3f192eeaa766330c826f632edcd5c5e07caf25fc
+    wandb_key: 
     run_name: report
 
-print_freq: 10
+print_freq: 5
 clip_norm: 5
-cur_epoch: 0
-epochs: 1
+cur_epoch: 29
+epochs: 60
 early_stop: 100
 sample_rate: 8000
 is_metrics: False
 
-checkpoint_path: null
+checkpoint_path: ../../chkpts/best_checkpoint_20-04_4.pt
 n_checkpoints: 1000
 new_checkpoints_path: ../../chkpts

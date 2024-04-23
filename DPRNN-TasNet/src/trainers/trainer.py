@@ -1,3 +1,4 @@
+import sys
 import os
 import time
 from collections import deque
@@ -9,6 +10,7 @@ import hydra
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau, ExponentialLR
 
+sys.path.append('../../')
 from src.reporters.reporter import Reporter
 
 class Trainer:
@@ -229,7 +231,7 @@ class Trainer:
         self.logger.info(message)
         return total_loss
 
-    def run(self, train_loader, eval_loader, n_epochs=50, early_stop=10):
+    def run(self, train_loader, eval_loader, n_epochs, early_stop):
         ''' Run. '''
         best_loss = 100500
 

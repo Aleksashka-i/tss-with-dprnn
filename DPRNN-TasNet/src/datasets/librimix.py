@@ -2,6 +2,7 @@ import os
 import random
 import shutil
 import zipfile
+import pickle as pkl
 
 import numpy as np
 import pandas as pd
@@ -30,6 +31,8 @@ class Librimix(Dataset):
         self.segment = segment
         self.return_id = return_id
         self.n_src = 2
+        self.stop = []
+        self.start = []
         # Open csv file
         if nrows is None:
             self.df = pd.read_csv(self.csv_path)
@@ -48,6 +51,16 @@ class Librimix(Dataset):
             )
         else:
             self.seg_len = None
+        for idx in range(len(self.df)):
+            row = self.df.iloc[idx]
+            if self.seg_len is not None:
+                start = random.randint(0, row['length'] - self.seg_len)
+                stop = start + self.seg_len
+            else:
+                start = 0
+                stop = None
+            self.start += [start]
+            self.stop += [stop]
 
     def __len__(self):
         return len(self.df)
@@ -58,13 +71,8 @@ class Librimix(Dataset):
         # Get mixture path
         mixture_path = row['mixture_path']
         sources_list = []
-        # If there is a seg start point is set randomly
-        if self.seg_len is not None:
-            start = random.randint(0, row['length'] - self.seg_len)
-            stop = start + self.seg_len
-        else:
-            start = 0
-            stop = None
+        start = self.start[idx]
+        stop = self.stop[idx]
         # Read sources
         for i in range(self.n_src):
             source_path = row[f'source_{i + 1}_path']
@@ -151,12 +159,16 @@ def get_train_dataloader(config):
     ----------
     dict config -- the config
     '''
-    train_set = Librimix(
-        csv_path=config['data']['train_path'],
-        sample_rate=config['sample_rate'],
-        nrows=config['data']['nrows_train'],
-        segment=config['data']['segment'],
-    )
+    if config['data']['use_generated_train'] is not None:
+        with open(config['data']['use_generated_train'], 'rb') as file:
+            train_set = pkl.load(file)
+    else:
+        train_set = Librimix(
+            csv_path=config['data']['train_path'],
+            sample_rate=config['sample_rate'],
+            nrows=config['data']['nrows_train'],
+            segment=config['data']['segment'],
+        )
     train_loader = DataLoader(
         train_set,
         shuffle=True,
@@ -173,12 +185,16 @@ def get_eval_dataloader(config):
     ----------
     dict config -- the config
     '''
-    eval_set = Librimix(
-        csv_path=config['data']['valid_path'],
-        sample_rate=config['sample_rate'],
-        nrows=config['data']['nrows_valid'],
-        segment=config['data']['segment'],
-    )
+    if config['data']['use_generated_eval'] is not None:
+        with open(config['data']['use_generated_eval'], 'rb') as file:
+            eval_set = pkl.load(file)
+    else:
+        eval_set = Librimix(
+            csv_path=config['data']['valid_path'],
+            sample_rate=config['sample_rate'],
+            nrows=config['data']['nrows_valid'],
+            segment=config['data']['segment'],
+        )
     eval_loader = DataLoader(
         eval_set,
         shuffle=False,

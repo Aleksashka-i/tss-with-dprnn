@@ -1,9 +1,10 @@
 ---
-name: Test
+name: test
 
 data:
-  test_path: ../../Libri2Mix/wav8k/min/metadata/mixture_test_mix_clean.csv
-  nrows_test: 1000
+  use_generated_test: ../../datasets/test_set.pkl
+  test_path:
+  nrows_test:
   segment: null
 
 model:
@@ -23,5 +24,5 @@ model:
 
 sample_rate: 8000
 
-checkpoint_path: ../../chkpts/*.pt
+checkpoint_path: ../../chkpts/best_checkpoint_21-04_5.pt
 test_savedir: ../../metrics

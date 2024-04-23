@@ -1,7 +1,11 @@
+import sys
 import logging
 import hydra
+import pickle as pkl
 
 from omegaconf import DictConfig, OmegaConf
+
+sys.path.append('../../')
 
 from src.datasets.librimix import get_train_dataloader, get_eval_dataloader
 from src.trainers.trainer import Trainer
@@ -18,7 +22,8 @@ def main(config: DictConfig):
     _, train_dataloader = get_train_dataloader(config)
     eval_set, eval_dataloader  = get_eval_dataloader(config)
     logger.info('OK')
-    logger.info(str(len(train_dataloader) + len(eval_dataloader)))
+    logger.info('train dataloader len: {}'.format(str(len(train_dataloader))))
+    logger.info('test dataloader len: {}'.format(str(len(eval_dataloader))))
 
     logger.info('Initializing data for reporter....')
     eval_mixtures = {}
