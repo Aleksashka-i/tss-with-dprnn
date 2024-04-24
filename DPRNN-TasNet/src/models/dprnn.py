@@ -151,7 +151,6 @@ class DPRNN(nn.Module):
         self.prelu = nn.PReLU()
         self.conv2d = nn.Conv2d(feature_size, feature_size * 2, kernel_size=1)
 
-        # those are from asteroid, not sure?
         self.out = nn.Sequential(nn.Conv1d(feature_size, feature_size, 1), nn.Tanh())
         self.gate = nn.Sequential(nn.Conv1d(feature_size, feature_size, 1), nn.Sigmoid())
 

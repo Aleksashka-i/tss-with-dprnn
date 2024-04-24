@@ -79,5 +79,25 @@ class Reporter:
 
                 table.add_data(str(id) + '_target', mix, s1_target, s2_target)
                 table.add_data(str(id) + '_estimated', None, s1_est, s2_est)
-
+            
             wandb.log({'inference (using best model)': table}, step=logs['step'])
+        
+        if self.mode == 'inference_spe':
+            self.logger.info('INFERENCE_spe!')
+
+            columns = ['mix_name', 'mix', 'target', 'estimated', 'reference']
+            table = wandb.Table(columns=columns)
+
+            mixtures = logs['mixtures']
+
+            for id in mixtures:
+                mix_id = mixtures[id]
+
+                mix = self.wandb_format_audio(mix_id['mix'])
+                target = self.wandb_format_audio(mix_id['target'])
+                estimated = self.wandb_format_audio(mix_id['estimated'])
+                reference = self.wandb_format_audio(mix_id['reference'])
+
+                table.add_data(str(id), mix, target, estimated, reference)
+
+            wandb.log({'inference_spe (using best model)': table}, step=logs['step'])

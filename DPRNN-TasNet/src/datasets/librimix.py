@@ -66,29 +66,21 @@ class Librimix(Dataset):
         return len(self.df)
 
     def __getitem__(self, idx):
-        # Get the row in dataframe
         row = self.df.iloc[idx]
-        # Get mixture path
         mixture_path = row['mixture_path']
         sources_list = []
         start = self.start[idx]
         stop = self.stop[idx]
-        # Read sources
         for i in range(self.n_src):
             source_path = row[f'source_{i + 1}_path']
             s, _ = sf.read(source_path, dtype='float32', start=start, stop=stop)
             sources_list.append(s)
-        # Read the mixture
         mixture, _ = sf.read(mixture_path, dtype='float32', start=start, stop=stop)
-        # Convert to torch tensor
         mixture = torch.from_numpy(mixture)
-        # Stack sources
         sources = np.vstack(sources_list)
-        # Convert sources to tensor
         sources = torch.from_numpy(sources)
         if not self.return_id:
             return mixture, sources
-        # e.g 5400-34479-0005_4973-24515-0007.wav => 5400-34479-0005, 4973-24515-0007
         id1, id2 = mixture_path.split('/')[-1].split('.')[0].split('_')
         return mixture, sources, [id1, id2]
 
@@ -131,16 +123,13 @@ class Librimix(Dataset):
         '''
         mini_dir = './MiniLibriMix/'
         os.makedirs(mini_dir, exist_ok=True)
-        # Download zip (or cached)
         zip_path = mini_dir + 'MiniLibriMix.zip'
         if not os.path.isfile(zip_path):
             hub.download_url_to_file(MINI_URL, zip_path)
-        # Unzip zip
         cond = all(os.path.isdir('MiniLibriMix/' + f) for f in ['train', 'val', 'metadata'])
         if not cond:
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall('./')  # Will unzip in MiniLibriMix
-        # Reorder metadata
+                zip_ref.extractall('./')
         src = 'MiniLibriMix/metadata/'
         for mode in ['train', 'val']:
             dst = f'MiniLibriMix/metadata/{mode}/'

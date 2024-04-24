@@ -7,6 +7,7 @@ from omegaconf import DictConfig, OmegaConf
 
 sys.path.append('../../')
 from src.datasets.librimix import Librimix
+from src.datasets.librimix_spe import LibrimixSpe
 
 @hydra.main(version_base=None, config_path='./', config_name='config')
 def main(config: DictConfig):
@@ -15,22 +16,24 @@ def main(config: DictConfig):
     OmegaConf.resolve(config)
 
     logger.info('RUN %s', config['name'])
-    logger.info('Initializing Datasets....')
-    train_set = Librimix(
+    dataset_cls = Librimix if config['data']['dataset_type'] == 'Librimix' else LibrimixSpe
+    logger.info('Initializing Datasets {}....'.format(dataset_cls))
+
+    train_set = dataset_cls(
         csv_path=config['data']['train_path'],
         sample_rate=config['sample_rate'],
         nrows=config['data']['nrows_train'],
         segment=config['data']['segment'],
     )
     logger.info('train len {}'.format(len(train_set)))
-    eval_set = Librimix(
+    eval_set = dataset_cls(
         csv_path=config['data']['eval_path'],
         sample_rate=config['sample_rate'],
         nrows=config['data']['nrows_eval'],
         segment=config['data']['segment'],
     )
     logger.info('eval len {}'.format(len(eval_set)))
-    test_set = Librimix(
+    test_set = dataset_cls(
         csv_path=config['data']['test_path'],
         sample_rate=config['sample_rate'],
         nrows=config['data']['nrows_test'],

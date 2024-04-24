@@ -2,8 +2,8 @@
 name: train
 
 data:
-  use_generated_train: ../../datasets/train_set.pkl
-  use_generated_eval: ../../datasets/eval_set.pkl
+  use_generated_train: ../../datasets/train_set_spe.pkl
+  use_generated_eval: ../../datasets/eval_set_spe.pkl
   train_path: 
   eval_path:
   nrows_train:
@@ -13,7 +13,7 @@ data:
   batch_size: 5
 
 model:
-  _target_: src.models.dprnn.DPRNNTasNet
+  _target_: src.models.dprnn_spe.DPRNNSpeTasNet
   input_size: 64
   output_size: 64
   feature_size: 128
@@ -26,6 +26,9 @@ model:
   norm_type: ln
   activation_type: sigmoid
   dropout: 0
+  mid_resnet_size: 256
+  embeddings_size: 128
+  num_spks: 251
 
 optimizer:
   _target_: torch.optim.Adam
@@ -42,21 +45,22 @@ logs:
     ids:
       - 14
       - 516
-      - 2901
+      - 2899
   wandb_credentials:
     wandb_project: DPRNN-TasNet
     wandb_entity: aleksashka
-    wandb_key: 
+    wandb_key: 3ffb2cd2ff9548c174c340f70f32fc1a649f3e22
     run_name: report
 
 print_freq: 5
 clip_norm: 5
-cur_epoch: 29
-epochs: 60
+cur_epoch: 0
+epochs: 30
 early_stop: 100
 sample_rate: 8000
 is_metrics: False
+ce_gamma: 0.5
 
-checkpoint_path: ../../chkpts/best_checkpoint_20-04_4.pt
+checkpoint_path: ../../chkpts/start_spe.pt
 n_checkpoints: 1000
 new_checkpoints_path: ../../chkpts
