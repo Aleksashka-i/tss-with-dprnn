@@ -96,33 +96,22 @@ class Trainer:
         metric_cnt = 0
 
         start_time = time.time()
-        for step, (mix, ref) in enumerate(dataloader):
+        for step, (mix, target) in enumerate(dataloader):
             mix_device = mix.to(self.device)
-            ref_device = ref.to(self.device)
+            target_device = target.to(self.device)
             self.optimizer.zero_grad()
             out = self.model(mix_device)
 
-            l, reordered_sources = self.loss_module(out, ref_device, return_est=True)
+            l, est = self.loss_module(out, target_device, return_est=True)
             epoch_loss = l
             total_loss += epoch_loss.item()
             epoch_loss.backward()
 
             if self.is_metrics is True:
-                mix = mix.detach().cpu().numpy()
-                ref = ref.detach().cpu().numpy()
-                reordered_sources = reordered_sources.detach().cpu().numpy()
-                for mix_, target_, est_ in zip(mix, ref, reordered_sources):
-                    metric_cnt += 1
-                    mix_ = mix_.reshape((1, ) + mix_.shape)
-                    cur_metrics_dict = get_metrics(
-                        mix_,
-                        target_,
-                        est_,
-                        sample_rate=self.sample_rate,
-                        metrics_list=self.metrics
-                    )
-                    metric_dict = {metric: metric_dict[metric] + cur_metrics_dict[metric]
-                               for metric in self.metrics}
+                mix = mix.cpu().numpy()
+                target = target.cpu().numpy()
+                est = est.cpu().numpy()
+                metric_dict = self.get_metric(mix, target, est, metric_dict)
 
             if self.clip_norm:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_norm)
@@ -130,33 +119,17 @@ class Trainer:
             self.optimizer.step()
 
             if step % self.print_freq == 0:
-                message = '<epoch:{:d}, iter:{:d}, lr:{:.3e}, loss:{:.3f}>.'.format(
-                    self.cur_epoch,
-                    step,
-                    self.optimizer.param_groups[0]['lr'],
-                    -total_loss / (step + 1)
-                )
-                self.logger.info(message)
+                self.log_step(step, total_loss)
         end_time = time.time()
 
-        total_loss = total_loss / num_steps
-        if self.is_metrics is True:
-            metric_dict = {metric: metric_dict[metric] / metric_cnt for metric in self.metrics}
-
-        logs={}
-        logs['step'] = self.cur_epoch
-        logs['loss'] = -total_loss
-        logs['metrics'] = metric_dict
-        self.reporter.add_and_report(logs=logs, mode='train')
-
-        message = 'Finished *** <epoch:{:d}, iter:{:d}, lr:{:.3e}, loss:{:.3f}, Total time:{:.3f} min>.'.format(
-            self.cur_epoch,
+        total_loss = self.log_epoch(
+            total_loss,
             num_steps,
-            self.optimizer.param_groups[0]['lr'],
-            -total_loss,
-            (end_time - start_time) / 60
+            metric_dict,
+            metric_cnt,
+            start_time,
+            end_time
         )
-        self.logger.info(message)
         return total_loss
 
     def eval(self, dataloader):
@@ -173,62 +146,35 @@ class Trainer:
 
         start_time = time.time()
         with torch.no_grad():
-            for step, (mix, ref) in enumerate(dataloader):
+            for step, (mix, target) in enumerate(dataloader):
                 mix = mix.to(self.device)
-                ref = ref.to(self.device)
+                target = target.to(self.device)
 
                 out = self.model(mix)
 
-                l, reordered_sources = self.loss_module(out, ref, return_est=True)
+                l, est = self.loss_module(out, target, return_est=True)
                 epoch_loss = l
                 total_loss += epoch_loss.item()
 
                 if self.is_metrics is True:
                     mix = mix.cpu().numpy()
-                    ref = ref.cpu().numpy()
-                    reordered_sources = reordered_sources.cpu().numpy()
-                    for mix_, target_, est_ in zip(mix, ref, reordered_sources):
-                        metric_cnt += 1
-                        mix_ = mix_.reshape((1, ) + mix_.shape)
-                        cur_metrics_dict = get_metrics(
-                            mix_,
-                            target_,
-                            est_,
-                            sample_rate=self.sample_rate,
-                            metrics_list=self.metrics
-                        )
-                        metric_dict = {metric: metric_dict[metric] + cur_metrics_dict[metric]
-                                   for metric in self.metrics}
+                    target = target.cpu().numpy()
+                    est = est.cpu().numpy()
+                    metric_dict = self.get_metric(mix, target, est, metric_dict)
 
                 if step % self.print_freq == 0:
-                    message = '<epoch:{:d}, iter:{:d}, lr:{:.3e}, loss:{:.3f}>.'.format(
-                        self.cur_epoch,
-                        step,
-                        self.optimizer.param_groups[0]['lr'],
-                        -total_loss / (step + 1)
-                    )
-                    self.logger.info(message)
+                    self.log_step(step, total_loss)
 
         end_time = time.time()
 
-        total_loss = total_loss / num_steps
-        if self.is_metrics is True:
-            metric_dict = {metric: metric_dict[metric] / metric_cnt for metric in self.metrics}
-
-        logs={}
-        logs['step'] = self.cur_epoch
-        logs['loss'] = -total_loss
-        logs['metrics'] = metric_dict
-        self.reporter.add_and_report(logs=logs, mode='eval')
-
-        message = 'Finished *** <epoch:{:d}, iter:{:d}, lr:{:.3e}, loss:{:.3f}, Total time:{:.3f} min>.'.format(
-            self.cur_epoch,
+        total_loss = self.log_epoch(
+            total_loss,
             num_steps,
-            self.optimizer.param_groups[0]['lr'],
-            -total_loss,
-            (end_time - start_time) / 60
+            metric_dict,
+            metric_cnt,
+            start_time,
+            end_time
         )
-        self.logger.info(message)
         return total_loss
 
     def run(self, train_loader, eval_loader, n_epochs, early_stop):
@@ -274,6 +220,52 @@ class Trainer:
         self.save_checkpoint(best=False)
         self.logger.info('Training for {:d}/{:d} epoches done!'.format(self.cur_epoch, n_epochs))
 
+    def log_step(self, step, total_loss):
+        message = '<epoch:{:d}, iter:{:d}, lr:{:.3e}, loss:{:.3f}>.'.format(
+            self.cur_epoch,
+            step,
+            self.optimizer.param_groups[0]['lr'],
+            -total_loss / (step + 1)
+        )
+        self.logger.info(message)
+
+    def log_epoch(self, total_loss, num_steps, metric_dict, metric_cnt, start_time, end_time):
+        total_loss = total_loss / num_steps
+        if self.is_metrics is True:
+            metric_dict = {metric: metric_dict[metric] / metric_cnt for metric in self.metrics}
+
+        logs={}
+        logs['step'] = self.cur_epoch
+        logs['loss'] = -total_loss
+        logs['metrics'] = metric_dict
+        self.reporter.add_and_report(logs=logs, mode='eval')
+
+        message = 'Finished *** <epoch:{:d}, iter:{:d}, lr:{:.3e}, loss:{:.3f}, Total time:{:.3f} min>.'.format(
+            self.cur_epoch,
+            num_steps,
+            self.optimizer.param_groups[0]['lr'],
+            -total_loss,
+            (end_time - start_time) / 60
+        )
+        self.logger.info(message)
+
+        return total_loss
+
+    def get_metric(self, mix, target, est, metric_dict):
+        for mix_, target_, est_ in zip(mix, target, est):
+            metric_cnt += 1
+            mix_ = mix_.reshape((1, ) + mix_.shape)
+            cur_metrics_dict = get_metrics(
+                mix_,
+                target_,
+                est_,
+                sample_rate=self.sample_rate,
+                metrics_list=self.metrics
+            )
+            metric_dict = {metric: metric_dict[metric] + cur_metrics_dict[metric]
+                        for metric in self.metrics}
+        return metric_dict
+
     def mixtures_inference(self):
         ''' Audio inference for eval_mixtures '''
         with torch.no_grad():
@@ -286,10 +278,10 @@ class Trainer:
                                        mix_id['s2_target'].unsqueeze(0)])
                 sources = sources.transpose(0, 1)
                 sources = sources.to(self.device)
-                _, reordered_sources = self.loss_module(out, sources, return_est=True)
-                reordered_sources = reordered_sources.squeeze(0)
-                self.eval_mixtures[id]['s1_estimated'] = reordered_sources[0]
-                self.eval_mixtures[id]['s2_estimated'] = reordered_sources[1]
+                _, est = self.loss_module(out, sources, return_est=True)
+                est = est.squeeze(0)
+                self.eval_mixtures[id]['s1_estimated'] = est[0]
+                self.eval_mixtures[id]['s2_estimated'] = est[1]
             logs={}
             logs['step'] = self.cur_epoch
             logs['mixtures'] = self.eval_mixtures
@@ -309,7 +301,10 @@ class Trainer:
             'optimizer': self.optimizer.state_dict(),
             'model': self.model.state_dict()
         }
-        path_to_save = os.path.join(self.new_checkpoints_path,
-                                    '{0}_{1}.pt'.format(str(self.cur_epoch), 'best' if best else 'last'))
+        path_to_save = os.path.join(
+            self.new_checkpoints_path,
+            '{0}_{1}.pt'.format(str(self.cur_epoch),
+            'best' if best else 'last')
+        )
         torch.save(cpt, path_to_save)
         self.process_checkpoint(path_to_save)

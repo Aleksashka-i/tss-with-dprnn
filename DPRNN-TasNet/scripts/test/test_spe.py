@@ -6,8 +6,8 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 
 sys.path.append('../../')
-from src.datasets.librimix import Librimix
-from src.inferencers.inferencer import Inferencer
+from src.datasets.librimix_spe import LibrimixSpe
+from src.inferencers.inferencer_spe import InferencerSpe
 
 @hydra.main(version_base=None, config_path='./', config_name='config')
 def main(config: DictConfig):
@@ -21,7 +21,7 @@ def main(config: DictConfig):
         with open(config['data']['use_generated_test'], 'rb') as file:
             test_set = pkl.load(file)
     else:
-        test_set = Librimix(
+        test_set = LibrimixSpe(
             csv_path=config['data']['test_path'],
             sample_rate=config['sample_rate'],
             nrows=config['data']['nrows_test'],
@@ -35,7 +35,7 @@ def main(config: DictConfig):
     logger.info('OK')
 
     logger.info('Initializing inferencer....')
-    inferencer = Inferencer(model, logger, config)
+    inferencer = InferencerSpe(model, logger, config)
     logger.info('OK')
 
     logger.info('Initiating inferencer run...')

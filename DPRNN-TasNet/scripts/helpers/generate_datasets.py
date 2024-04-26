@@ -1,8 +1,8 @@
 import sys
 import logging
-import hydra
 import pickle as pkl
 
+import hydra
 from omegaconf import DictConfig, OmegaConf
 
 sys.path.append('../../')

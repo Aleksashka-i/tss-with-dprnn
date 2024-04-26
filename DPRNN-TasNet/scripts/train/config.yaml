@@ -10,10 +10,10 @@ data:
   nrows_eval:
   segment:
   num_workers: 2
-  batch_size: 5
+  batch_size: 2
 
 model:
-  _target_: src.models.dprnn_spe.DPRNNSpeTasNet
+  _target_: src.models.dprnn_spe_ira.DPRNNSpeIRATasNet
   input_size: 64
   output_size: 64
   feature_size: 128
@@ -32,11 +32,11 @@ model:
 
 optimizer:
   _target_: torch.optim.Adam
-  lr: 0.0005
+  lr: 0.001
   weight_decay: !!float 1e-5
 
 lr_scheduler:
-  patience: 5
+  patience: 2
   factor: 0.5
   decay_rate: null
 
@@ -61,6 +61,6 @@ sample_rate: 8000
 is_metrics: False
 ce_gamma: 0.5
 
-checkpoint_path: ../../chkpts/start_spe.pt
+checkpoint_path: ../../chkpts/start_spe_ira_ks=2.pt
 n_checkpoints: 1000
 new_checkpoints_path: ../../chkpts

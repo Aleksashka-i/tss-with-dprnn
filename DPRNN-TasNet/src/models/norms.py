@@ -1,6 +1,7 @@
+from typing import List
+
 import torch
 from torch import nn
-from typing import List
 
 def z_norm(x, dims: List[int], eps: float = 1e-8):
     mean = x.mean(dim=dims, keepdim=True)

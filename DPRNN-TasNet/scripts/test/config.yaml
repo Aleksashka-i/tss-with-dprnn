@@ -2,13 +2,13 @@
 name: test
 
 data:
-  use_generated_test: ../../datasets/test_set.pkl
+  use_generated_test: ../../datasets/test_set_spe.pkl
   test_path:
   nrows_test:
   segment: null
 
 model:
-  _target_: src.models.dprnn.DPRNNTasNet
+  _target_: src.models.dprnn_spe.DPRNNSpeTasNet
   input_size: 64
   output_size: 64
   feature_size: 128
@@ -21,8 +21,11 @@ model:
   norm_type: ln
   activation_type: sigmoid
   dropout: 0
+  mid_resnet_size: 256
+  embeddings_size: 128
+  num_spks: 251
 
 sample_rate: 8000
 
-checkpoint_path: ../../chkpts/best_checkpoint_21-04_5.pt
+checkpoint_path: ../../chkpts/best_spe_25-04_ks=2.pt
 test_savedir: ../../metrics

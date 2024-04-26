@@ -1,16 +1,12 @@
-import sys
 import random
 import pickle as pkl
-import numpy as np
 import pandas as pd
 
 import torch
 from torch.utils.data import DataLoader
-
-sys.path.append('../../')
-from src.datasets.librimix import Librimix
-
 import soundfile as sf
+
+from src.datasets.librimix import Librimix
 
 MINI_URL = 'https://zenodo.org/record/3871592/files/MiniLibriMix.zip?download=1'
 
@@ -67,7 +63,7 @@ class LibrimixSpe(Librimix):
             if speaker_id not in self.speakers_mapping.keys():
                 self.speakers_mapping[speaker_id] = cnt
                 cnt += 1
-    
+
     def _choose_target_dummy(self, row):
         mixture_path = row['mixture_path']
         audio_id = self._get_first_speaker_id(mixture_path)
@@ -89,9 +85,9 @@ class LibrimixSpe(Librimix):
                                    ['source_2_path', 'length']]
 
         combined_filtered_sources = pd.concat([
-                                        filtered_source_1.rename(columns={'source_1_path': 'source_path'}),
-                                        filtered_source_2.rename(columns={'source_2_path': 'source_path'})
-                                    ])
+            filtered_source_1.rename(columns={'source_1_path': 'source_path'}),
+            filtered_source_2.rename(columns={'source_2_path': 'source_path'})
+        ])
 
         target_row = combined_filtered_sources.sample(n = 1)
 

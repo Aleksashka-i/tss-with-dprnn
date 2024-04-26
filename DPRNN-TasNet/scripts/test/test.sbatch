@@ -4,8 +4,8 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus=1
 #SBATCH --time=0-24:0
-#SBATCH --output="test.out"
+#SBATCH --output="test_spe.out"
 
 
 # Executable
-python3 test.py --config-path="./" --config-name="config.yaml"
+python3 test_spe.py --config-path="./" --config-name="config.yaml"

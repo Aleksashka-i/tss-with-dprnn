@@ -1,12 +1,10 @@
 import sys
 import logging
-import hydra
-import pickle as pkl
 
+import hydra
 from omegaconf import DictConfig, OmegaConf
 
 sys.path.append('../../')
-
 from src.datasets.librimix import get_train_dataloader, get_eval_dataloader
 from src.trainers.trainer import Trainer
 from src.reporters.reporter import Reporter

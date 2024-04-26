@@ -2,68 +2,16 @@ import torch
 from torch import nn
 from src.models.encoder_decoder import Encoder, Decoder
 from src.models import norms
-from src.models.dprnn import DPRNN
+from src.models.dprnn_spe import ResBlock, DPRNNSpe
 
-class ResBlock(nn.Module):
-    """
-    Resnet block for speaker encoder to obtain speaker embedding
-    ref to 
-        https://github.com/fatchord/WaveRNN/blob/master/models/fatchord_version.py
-        and
-        https://github.com/Jungjee/RawNet/blob/master/PyTorch/model_RawNet.py
-    """
-    def __init__(self, in_dims, out_dims):
-        super(ResBlock, self).__init__()
-        self.conv1 = nn.Conv1d(in_dims, out_dims, kernel_size=1, bias=False)
-        self.conv2 = nn.Conv1d(out_dims, out_dims, kernel_size=1, bias=False)
-        self.batch_norm1 = nn.BatchNorm1d(out_dims)
-        self.batch_norm2 = nn.BatchNorm1d(out_dims)
-        self.prelu1 = nn.PReLU()
-        self.prelu2 = nn.PReLU()
-        self.maxpool = nn.MaxPool1d(3)
-        if in_dims != out_dims:
-            self.downsample = True
-            self.conv_downsample = nn.Conv1d(in_dims, out_dims, kernel_size=1, bias=False)
-        else:
-            self.downsample = False
-
-    def forward(self, x):
-        y = self.conv1(x)
-        y = self.batch_norm1(y)
-        y = self.prelu1(y)
-        y = self.conv2(y)
-        y = self.batch_norm2(y)
-        if self.downsample:
-            y += self.conv_downsample(x)
-        else:
-            y += x
-        y = self.prelu2(y)
-        return self.maxpool(y)
-
-class DPRNNSpe(DPRNN):
-    ''' Dual-Path RNN.
-
-        rnn_type: string, select from 'RNN', 'LSTM' and 'GRU'.
-        input_size: int.
-        feature_size: int, default: 128.
-        hidden_size: int, default: 128.
-        chunk_length: int, 
-        hop_length: int,
-        n_repeats: int, default: 6.
-        dropout: float, default: 0.
-        bidirectional: bool, default: False.
-        norm_type: str.
-        activation_type: str.
-        mid_resnet_size: int.
-        embeddings_size: int.
-        num_spks: int.
-    '''
+class DPRNNSpeIRA(DPRNNSpe):
     def __init__(self, input_size, output_size=None, feature_size=128,
                  hidden_size=128, chunk_length=200, hop_length=None,
                  n_repeats=6, bidirectional=True, rnn_type='LSTM',
                  norm_type='gLN', activation_type='sigmoid', dropout=0,
                  mid_resnet_size=256, embeddings_size=128, num_spks=251,
                  kernel_size=2):
+        assert input_size == output_size, "Input size must be equal to output size (sorry)."
         super().__init__(
             input_size,
             output_size,
@@ -76,53 +24,78 @@ class DPRNNSpe(DPRNN):
             rnn_type,
             norm_type,
             activation_type,
-            dropout=0
+            dropout,
+            mid_resnet_size,
+            embeddings_size,
+            num_spks,
+            kernel_size,
         )
-        self.kernel_size = kernel_size
-
-        # bottleneck
-        if norm_type == 'gLN':
-            linear_norm = norms.GlobLN(input_size)
-        else:
-            linear_norm = nn.GroupNorm(1, input_size)
-        start_conv1d = nn.Conv1d(input_size + embeddings_size, feature_size, 1)
-        self.bottleneck = nn.Sequential(linear_norm, start_conv1d)
-        
-        # target
         self.spk_encoder = nn.Sequential(
-            nn.GroupNorm(1, input_size),
+            norms.GlobLN(input_size),
             nn.Conv1d(input_size, feature_size, 1),
             ResBlock(feature_size, feature_size),
             ResBlock(feature_size, mid_resnet_size),
             ResBlock(mid_resnet_size, mid_resnet_size),
             nn.Conv1d(mid_resnet_size, embeddings_size, 1),
         )
-        self.pred_linear = nn.Linear(embeddings_size, num_spks)
+        self.embeddings_size = embeddings_size
+        self.aux_linear = nn.Linear(2 * embeddings_size, embeddings_size)
 
     def forward(self, input, aux, aux_len):
         ''' input: [B, N(input_size), L]
             aux: [B, N(input_size), L] 
         '''
+        # first auxilary run
+        v0 = self.auxilary(aux, aux_len)
+        B, _, L = input.size()
+        output_norm = self.bottleneck[0](input)
+        # -> [B, N(input_size), L]
+        # first extraction concatenation
+        output = self.concatenation(v0, output_norm, L)
+        output = self.bottleneck[1](output)
+        # first estimated representation
+        masks = self.dprnn_process(output, B, L)
+        d0 = masks * input.unsqueeze(1)
+        d0 = d0[:, 0, :, :]
+
+        # second auxilary run
+        v1 = self.auxilary(d0, aux_len)
+        # auxilary concatenation
+        v1 = torch.cat((v0, v1), dim=1) 
+        # -> [B, 2 * embeddings_size]
+        v1 = self.aux_linear(v1)
+        # second extraction concatenation
+        output = self.concatenation(v1, output_norm, L)
+        output = self.bottleneck[1](output)
+        # second estimated representation
+        masks = self.dprnn_process(output, B, L)
+        d1 = masks * input.unsqueeze(1)
+        d1 = d1[:, 0, :, :]
+
+        v1 = self.pred_linear(v1)
+        return d1, v1
+    
+    def auxilary(self, aux, aux_len):
+        ''' aux: [B, N(input_size), L] 
+        '''
         aux = self.spk_encoder(aux)
         # -> [B, embeddings_size, L // 3]
         aux_T = (aux_len - self.kernel_size) // (self.kernel_size // 2) + 1
         aux_T = ((aux_T // 3) // 3) // 3
-        aux = torch.sum(aux, -1) / aux_T.view(-1, 1).float() 
-        # -> [B, embeddings_size, L // 3]
+        aux = torch.sum(aux, -1) / aux_T.view(-1, 1).float()
+        # -> [B, embeddings_size]
+        return aux
 
-        B, _, L = input.size()
-        output = self.bottleneck[0](input)
-        # -> [B, N(input_size), L]
-
+    def concatenation(self, aux, output, L):
         # concatenation
         aux_concat = torch.unsqueeze(aux, -1)
         aux_concat  = aux_concat.repeat(1, 1, L)
          # -> [B, N(embeddings_size), L]
         output = torch.cat([output, aux_concat], 1)
         # -> [B, N(input_size + embeddings_size), L]
+        return output
 
-        output = self.bottleneck[1](output)
-
+    def dprnn_process(self, output, B, L):
         output, n_chunks = self._segmentation(output)
         # ->  # [B, N, K, S]
         output = self.dprnn_blocks(output)
@@ -139,13 +112,9 @@ class DPRNNSpe(DPRNN):
         output = self.activation(output)
         output = output.reshape(B, 2, self.output_size, L)
         # -> [B, 2, N(output_size), L]
+        return output # -> [B, N(output_size), L]
 
-        aux = self.pred_linear(aux)
-        # -> [B, num_spks]
-
-        return output, aux
-
-class DPRNNSpeTasNet(nn.Module):
+class DPRNNSpeIRATasNet(nn.Module):
     ''' DPRNN-TasNet
 
         rnn_type: string, select from 'RNN', 'LSTM' and 'GRU'.
@@ -180,7 +149,7 @@ class DPRNNSpeTasNet(nn.Module):
             stride=self.stride,
             bias=False,
         )
-        self.separation = DPRNNSpe(
+        self.separation = DPRNNSpeIRA(
             input_size,
             output_size,
             feature_size,
@@ -212,7 +181,6 @@ class DPRNNSpeTasNet(nn.Module):
         '''
         encoders = self.encoder(input) # -> [B, N, L]
         embeddings = self.encoder(aux) # -> [B, N, L]
-        masks, aux = self.separation(encoders, embeddings, aux_len) # -> [B, 2, N, L], [B, num_spks]
-        output = masks * encoders.unsqueeze(1)  # -> [B, 2, N, L]
-        mixture = self.decoder(output[:, 0, :, :]) # [B, L] (first speaker only)
+        output, aux = self.separation(encoders, embeddings, aux_len) # -> [B, N, L], [B, num_spks]
+        mixture = self.decoder(output) # [B, L]
         return mixture, aux

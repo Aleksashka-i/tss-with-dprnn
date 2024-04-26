@@ -52,7 +52,6 @@ class Inferencer:
         start_time = time.time()
         torch.no_grad().__enter__()
         for idx in range(len(test_set)):
-            # Forward the network on the mixture.
             mix, sources = test_set[idx]
             mix = mix.to(self.device)
             sources = sources.to(self.device)
@@ -76,7 +75,9 @@ class Inferencer:
             (end_time - start_time) / 60
         )
         self.logger.info(message)
+        self.save_result(series_list)
 
+    def save_result(self, series_list):
         all_metrics_df = pd.DataFrame(series_list)
         all_metrics_df.to_csv(os.path.join(self.test_savedir, 'all_metrics.csv'))
 
