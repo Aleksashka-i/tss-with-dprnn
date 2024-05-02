@@ -8,14 +8,14 @@ import torch
 from src.inferencers.inferencer import Inferencer
 
 class InferencerSpe(Inferencer):
-    ''' Inferencer (spe) class. '''
+    ''' Inferencer (Spe) class. '''
     def run(self, test_set):
-        ''' Run. '''
         series_list = []
 
         start_time = time.time()
         torch.no_grad().__enter__()
         for idx in range(len(test_set)):
+            self.logger.info('idx: {}'.format(idx))
             mix, target, reference, _ = test_set[idx]
             mix = mix.to(self.device)
             reference = reference.to(self.device)
@@ -40,4 +40,4 @@ class InferencerSpe(Inferencer):
             (end_time - start_time) / 60
         )
         self.logger.info(message)
-        self.save_result(series_list)
+        self._save_result(series_list)

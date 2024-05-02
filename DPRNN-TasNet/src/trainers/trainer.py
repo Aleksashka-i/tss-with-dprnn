@@ -84,7 +84,6 @@ class Trainer:
         self.logger.info(self.new_checkpoints_path)
 
     def train(self, dataloader):
-        ''' Train stage. '''
         self.logger.info('Set train mode...')
         self.model.train()
         num_steps = len(dataloader)
@@ -111,7 +110,7 @@ class Trainer:
                 mix = mix.cpu().numpy()
                 target = target.cpu().numpy()
                 est = est.cpu().numpy()
-                metric_dict = self.get_metric(mix, target, est, metric_dict)
+                metric_dict = self._get_metric(mix, target, est, metric_dict)
 
             if self.clip_norm:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_norm)
@@ -119,21 +118,21 @@ class Trainer:
             self.optimizer.step()
 
             if step % self.print_freq == 0:
-                self.log_step(step, total_loss)
+                self._log_step(step, total_loss)
         end_time = time.time()
 
-        total_loss = self.log_epoch(
+        total_loss = self._log_epoch(
             total_loss,
             num_steps,
             metric_dict,
             metric_cnt,
             start_time,
-            end_time
+            end_time,
+            'train',
         )
         return total_loss
 
     def eval(self, dataloader):
-        ''' Eval stage. '''
         self.logger.info('Set eval mode...')
         self.model.eval()
         num_steps = len(dataloader)
@@ -160,25 +159,25 @@ class Trainer:
                     mix = mix.cpu().numpy()
                     target = target.cpu().numpy()
                     est = est.cpu().numpy()
-                    metric_dict = self.get_metric(mix, target, est, metric_dict)
+                    metric_dict = self._get_metric(mix, target, est, metric_dict)
 
                 if step % self.print_freq == 0:
-                    self.log_step(step, total_loss)
+                    self._log_step(step, total_loss)
 
         end_time = time.time()
 
-        total_loss = self.log_epoch(
+        total_loss = self._log_epoch(
             total_loss,
             num_steps,
             metric_dict,
             metric_cnt,
             start_time,
-            end_time
+            end_time,
+            'eval'
         )
         return total_loss
 
     def run(self, train_loader, eval_loader, n_epochs, early_stop):
-        ''' Run. '''
         best_loss = 100500
 
         train_losses = []
@@ -206,21 +205,21 @@ class Trainer:
             else:
                 best_loss = eval_loss
                 no_improve_cnt = 0
-                self.save_checkpoint(best=True)
+                self._save_checkpoint(best=True)
                 self.logger.info('Epoch: {:d}, Now Best Loss Change: {:.4f}.'
                                  .format(self.cur_epoch, -best_loss))
 
-                self.mixtures_inference()
+                self._mixtures_inference()
 
             if no_improve_cnt == early_stop:
                 self.logger.info('Stop training cause no impr for {:d} epochs'
                                  .format(no_improve_cnt))
                 break
 
-        self.save_checkpoint(best=False)
+        self._save_checkpoint(best=False)
         self.logger.info('Training for {:d}/{:d} epoches done!'.format(self.cur_epoch, n_epochs))
 
-    def log_step(self, step, total_loss):
+    def _log_step(self, step, total_loss):
         message = '<epoch:{:d}, iter:{:d}, lr:{:.3e}, loss:{:.3f}>.'.format(
             self.cur_epoch,
             step,
@@ -229,7 +228,7 @@ class Trainer:
         )
         self.logger.info(message)
 
-    def log_epoch(self, total_loss, num_steps, metric_dict, metric_cnt, start_time, end_time):
+    def _log_epoch(self, total_loss, num_steps, metric_dict, metric_cnt, start_time, end_time, mode):
         total_loss = total_loss / num_steps
         if self.is_metrics is True:
             metric_dict = {metric: metric_dict[metric] / metric_cnt for metric in self.metrics}
@@ -238,7 +237,7 @@ class Trainer:
         logs['step'] = self.cur_epoch
         logs['loss'] = -total_loss
         logs['metrics'] = metric_dict
-        self.reporter.add_and_report(logs=logs, mode='eval')
+        self.reporter.add_and_report(logs=logs, mode=mode)
 
         message = 'Finished *** <epoch:{:d}, iter:{:d}, lr:{:.3e}, loss:{:.3f}, Total time:{:.3f} min>.'.format(
             self.cur_epoch,
@@ -251,7 +250,7 @@ class Trainer:
 
         return total_loss
 
-    def get_metric(self, mix, target, est, metric_dict):
+    def _get_metric(self, mix, target, est, metric_dict):
         for mix_, target_, est_ in zip(mix, target, est):
             metric_cnt += 1
             mix_ = mix_.reshape((1, ) + mix_.shape)
@@ -266,8 +265,7 @@ class Trainer:
                         for metric in self.metrics}
         return metric_dict
 
-    def mixtures_inference(self):
-        ''' Audio inference for eval_mixtures '''
+    def _mixtures_inference(self):
         with torch.no_grad():
             for id in self.eval_mixtures:
                 mix_id = self.eval_mixtures[id]
@@ -287,15 +285,13 @@ class Trainer:
             logs['mixtures'] = self.eval_mixtures
             self.reporter.add_and_report(logs=logs, mode='inference')
 
-    def process_checkpoint(self, path):
-        ''' Directory maintaining. '''
+    def _process_checkpoint(self, path):
         if len(self.checkpoint_queue) == self.checkpoint_queue.maxlen:
             removed_checkpoint = self.checkpoint_queue[0]
             os.remove(removed_checkpoint)
         self.checkpoint_queue.append(path)
 
-    def save_checkpoint(self, best=False):
-        ''' Saves the checkpoint. '''
+    def _save_checkpoint(self, best=False):
         cpt = {
             'epoch': self.cur_epoch,
             'optimizer': self.optimizer.state_dict(),
@@ -307,4 +303,4 @@ class Trainer:
             'best' if best else 'last')
         )
         torch.save(cpt, path_to_save)
-        self.process_checkpoint(path_to_save)
+        self._process_checkpoint(path_to_save)

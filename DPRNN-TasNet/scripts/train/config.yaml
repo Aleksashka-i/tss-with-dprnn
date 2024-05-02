@@ -9,13 +9,12 @@ data:
   nrows_train:
   nrows_eval:
   segment:
-  num_workers: 2
-  batch_size: 2
+  num_workers: 1
+  batch_size: 5
 
 model:
-  _target_: src.models.dprnn_spe_ira.DPRNNSpeIRATasNet
+  _target_: src.models.dprnn_spe.DPRNNSpeTasNet
   input_size: 64
-  output_size: 64
   feature_size: 128
   hidden_size: 128
   chunk_length: 250
@@ -29,10 +28,11 @@ model:
   mid_resnet_size: 256
   embeddings_size: 128
   num_spks: 251
+  fusion_type: 'add'
 
 optimizer:
   _target_: torch.optim.Adam
-  lr: 0.001
+  lr: 0.0005
   weight_decay: !!float 1e-5
 
 lr_scheduler:
@@ -49,18 +49,18 @@ logs:
   wandb_credentials:
     wandb_project: DPRNN-TasNet
     wandb_entity: aleksashka
-    wandb_key: 3ffb2cd2ff9548c174c340f70f32fc1a649f3e22
+    wandb_key:
     run_name: report
 
 print_freq: 5
 clip_norm: 5
 cur_epoch: 0
-epochs: 30
+epochs: 11
 early_stop: 100
 sample_rate: 8000
 is_metrics: False
 ce_gamma: 0.5
 
-checkpoint_path: ../../chkpts/start_spe_ira_ks=2.pt
+checkpoint_path: ../../chkpts/start_spe_add_ks=2.pt
 n_checkpoints: 1000
 new_checkpoints_path: ../../chkpts

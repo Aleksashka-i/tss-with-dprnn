@@ -17,15 +17,16 @@ import soundfile as sf
 MINI_URL = 'https://zenodo.org/record/3871592/files/MiniLibriMix.zip?download=1'
 
 class Librimix(Dataset):
-    '''Base dataset (Libri2Mix) class for DPRNN-TasNet.
+    ''' Base dataset (Libri2Mix) class for DPRNN-TasNet.
 
     Args:
-        csv_path (str): The path to the metadata file.
-        sample_rate (float): The sample rate of the sources and mixtures.
-        segment (int, optional): The desired sources and mixtures length in s.
-        return_id (bool): If True, returns mixture ID. Default is False.
+        csv_path: str.
+        sample_rate: float.
+        nrows: int.
+        segment: int.
+        return_id: bool.
     '''
-    def __init__(self, csv_path, sample_rate, nrows = None, segment=3, return_id=False):
+    def __init__(self, csv_path, sample_rate, nrows=None, segment=3, return_id=False):
         self.csv_path = csv_path
         self.sample_rate = sample_rate
         self.segment = segment
@@ -86,8 +87,7 @@ class Librimix(Dataset):
 
     @classmethod
     def loaders_from_mini(cls, batch_size=4, nrows=None, **kwargs):
-        '''Downloads MiniLibriMix and returns train and validation DataLoader.
-        '''
+        ''' Downloads MiniLibriMix and returns train and validation DataLoader. '''
         train_set, val_set = cls.mini_from_download(nrows=nrows, **kwargs)
         train_loader = DataLoader(train_set, batch_size=batch_size, drop_last=True)
         val_loader = DataLoader(val_set, batch_size=batch_size, drop_last=True)
@@ -95,8 +95,7 @@ class Librimix(Dataset):
 
     @classmethod
     def mini_from_download(cls, nrows=None, **kwargs):
-        '''Downloads MiniLibriMix and returns train and validation Dataset.
-        '''
+        ''' Downloads MiniLibriMix and returns train and validation Dataset. '''
         assert 'csv_dir' not in kwargs, 'Cannot specify csv_dir when downloading.'
         assert kwargs.get('task', 'sep_clean') in [
             'sep_clean',
@@ -117,9 +116,8 @@ class Librimix(Dataset):
 
     @staticmethod
     def mini_download():
-        '''Downloads MiniLibriMix from Zenodo in current directory
-        Returns:
-            The path to the metadata directory.
+        ''' Downloads MiniLibriMix from Zenodo in current directory.
+            Returns the path to the metadata directory.
         '''
         mini_dir = './MiniLibriMix/'
         os.makedirs(mini_dir, exist_ok=True)
@@ -142,12 +140,6 @@ class Librimix(Dataset):
         return './MiniLibriMix/metadata'
 
 def get_train_dataloader(config):
-    '''Returns a DataLoader object based on the given config (train version).
-
-    Parameters
-    ----------
-    dict config -- the config
-    '''
     if config['data']['use_generated_train'] is not None:
         with open(config['data']['use_generated_train'], 'rb') as file:
             train_set = pkl.load(file)
@@ -168,12 +160,6 @@ def get_train_dataloader(config):
     return train_set, train_loader
 
 def get_eval_dataloader(config):
-    '''Returns a DataLoader object based on the given config (eval version).
-
-    Parameters
-    ----------
-    dict config -- the config
-    '''
     if config['data']['use_generated_eval'] is not None:
         with open(config['data']['use_generated_eval'], 'rb') as file:
             eval_set = pkl.load(file)

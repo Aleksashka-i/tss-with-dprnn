@@ -8,9 +8,8 @@ data:
   segment: null
 
 model:
-  _target_: src.models.dprnn_spe.DPRNNSpeTasNet
+  _target_: src.models.dprnn_spe_ira.DPRNNSpeIRATasNet
   input_size: 64
-  output_size: 64
   feature_size: 128
   hidden_size: 128
   chunk_length: 250
@@ -27,5 +26,5 @@ model:
 
 sample_rate: 8000
 
-checkpoint_path: ../../chkpts/best_spe_25-04_ks=2.pt
+checkpoint_path: ../../chkpts/best_spe_ira_01-05.pt
 test_savedir: ../../metrics

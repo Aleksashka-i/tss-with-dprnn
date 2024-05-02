@@ -23,18 +23,13 @@ class Encoder(nn.Module):
         )
 
     def forward(self, input):
-        '''
-        Input:
-            input: [B, L], B is batch size, L is times.
-        Returns:
-            output: [B, C, L_out]:
-            - L_out is the number of time steps.
-            - C is ouput_size.
-        '''
         output = input
-        output = torch.unsqueeze(output, 1)  # -> [B, 1, L]
+        # [B, L]
+        output = torch.unsqueeze(output, 1)
+        # -> [B, 1, L]
         output = self.conv1d(output)
-        output = F.relu(output)  # -> [B, C, L_out]
+        # -> [B, C, L_out]
+        output = F.relu(output)
         return output
 
 class Decoder(nn.ConvTranspose1d):
@@ -43,14 +38,12 @@ class Decoder(nn.ConvTranspose1d):
         super().__init__(*args, **kwargs)
 
     def forward(self, input):
-        '''
-        input: [B, N, L]
-        output: [B, L]
-        '''
         output = input
+        # [B, N, L]
         output = super().forward(output)
         if torch.squeeze(output).dim() == 1:
             output = torch.squeeze(output, dim=1)
         else:
             output = torch.squeeze(output)
+        # -> [B, L]
         return output

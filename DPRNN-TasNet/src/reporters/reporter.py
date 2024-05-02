@@ -2,7 +2,6 @@ import wandb
 
 class Reporter:
     ''' Reporter class. '''
-
     def __init__(self, config, logger):
         self.logger = logger
         self.sample_rate = config['sample_rate']
@@ -22,26 +21,21 @@ class Reporter:
             )
 
     def wandb_format_name(self, name):
-        ''' Wandb name format. '''
         return f'{name}_{self.mode}'
 
     def wandb_format_number(self, number_name, number):
-        ''' Wandb number format. '''
         return {
             self.wandb_format_name(number_name): number
         }
 
     def wandb_format_audio(self, audio):
-        ''' Wandb audio format. '''
         audio = audio.detach().cpu().numpy()
         return wandb.Audio(audio, sample_rate=self.sample_rate)
 
     def wandb_finish(self):
-        ''' Wandb run finish. '''
         wandb.finish()
 
     def add_and_report(self, logs=None, mode='train'):
-        ''' Report update. '''
         self.mode = mode
 
         if self.mode == 'train':

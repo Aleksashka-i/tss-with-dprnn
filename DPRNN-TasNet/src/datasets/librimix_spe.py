@@ -11,13 +11,14 @@ from src.datasets.librimix import Librimix
 MINI_URL = 'https://zenodo.org/record/3871592/files/MiniLibriMix.zip?download=1'
 
 class LibrimixSpe(Librimix):
-    '''Base dataset (Libri2Mix) class for DPRNN-TasNet.
+    ''' Base dataset (Libri2Mix) class for DPRNN-TasNet.
 
     Args:
-        csv_path (str): The path to the metadata file.
-        sample_rate (float): The sample rate of the sources and mixtures.
-        segment (int, optional): The desired sources and mixtures length in s.
-        return_id (bool): If True, returns mixture ID. Default is False.
+        csv_path: str.
+        sample_rate: float.
+        nrows: int.
+        segment: int.
+        return_id: bool.
     '''
     def __init__(self, csv_path, sample_rate, nrows = None, segment=3, return_id=False):
         super().__init__(csv_path, sample_rate, nrows=nrows, segment=segment, return_id=return_id)
@@ -115,12 +116,6 @@ class LibrimixSpe(Librimix):
         raise NotImplementedError
 
 def get_train_spe_dataloader(config):
-    '''Returns a DataLoader object based on the given config (train version).
-
-    Parameters
-    ----------
-    dict config -- the config
-    '''
     if config['data']['use_generated_train'] is not None:
         with open(config['data']['use_generated_train'], 'rb') as file:
             train_set = pkl.load(file)
@@ -141,12 +136,6 @@ def get_train_spe_dataloader(config):
     return train_set, train_loader
 
 def get_eval_spe_dataloader(config):
-    '''Returns a DataLoader object based on the given config (eval version).
-
-    Parameters
-    ----------
-    dict config -- the config
-    '''
     if config['data']['use_generated_eval'] is not None:
         with open(config['data']['use_generated_eval'], 'rb') as file:
             eval_set = pkl.load(file)

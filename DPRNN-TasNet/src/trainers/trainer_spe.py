@@ -12,7 +12,6 @@ class TrainerSpe(Trainer):
         self.ce_gamma = config['ce_gamma']
 
     def train(self, dataloader):
-        ''' Train stage. '''
         self.logger.info('Set train mode...')
         self.model.train()
         num_steps = len(dataloader)
@@ -49,7 +48,7 @@ class TrainerSpe(Trainer):
                 mix = mix.detach().cpu().numpy()
                 target = target.detach().cpu().numpy()
                 est = est.detach().cpu().numpy()
-                metric_dict = self.get_metric(mix, target, est, metric_dict)
+                metric_dict = self._get_metric(mix, target, est, metric_dict)
 
             if self.clip_norm:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.clip_norm)
@@ -58,21 +57,21 @@ class TrainerSpe(Trainer):
 
             if step % self.print_freq == 0:
                 self.logger.info('l: {}, ce: {}'.format(l, ce_loss))
-                self.log_step(step, total_loss)
+                self._log_step(step, total_loss)
         end_time = time.time()
 
-        total_loss = self.log_epoch(
+        total_loss = self._log_epoch(
             total_loss,
             num_steps,
             metric_dict,
             metric_cnt,
             start_time,
-            end_time
+            end_time,
+            'train',
         )
         return total_loss
 
     def eval(self, dataloader):
-        ''' Eval stage. '''
         self.logger.info('Set eval mode...')
         self.model.eval()
         num_steps = len(dataloader)
@@ -101,25 +100,25 @@ class TrainerSpe(Trainer):
                     mix = mix.cpu().numpy()
                     target = target.cpu().numpy()
                     est = est.cpu().numpy()
-                    metric_dict = self.get_metric(mix, target, est, metric_dict)
+                    metric_dict = self._get_metric(mix, target, est, metric_dict)
 
                 if step % self.print_freq == 0:
-                    self.log_step(step, total_loss)
+                    self._log_step(step, total_loss)
 
         end_time = time.time()
 
-        total_loss = self.log_epoch(
+        total_loss = self._log_epoch(
             total_loss,
             num_steps,
             metric_dict,
             metric_cnt,
             start_time,
-            end_time
+            end_time,
+            'eval',
         )
         return total_loss
 
-    def mixtures_inference(self):
-        ''' Audio inference for eval_mixtures '''
+    def _mixtures_inference(self):
         with torch.no_grad():
             for id in self.eval_mixtures:
                 mix_id = self.eval_mixtures[id]

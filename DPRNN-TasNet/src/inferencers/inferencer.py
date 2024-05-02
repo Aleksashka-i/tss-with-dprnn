@@ -75,9 +75,9 @@ class Inferencer:
             (end_time - start_time) / 60
         )
         self.logger.info(message)
-        self.save_result(series_list)
+        self._save_result(series_list)
 
-    def save_result(self, series_list):
+    def _save_result(self, series_list):
         all_metrics_df = pd.DataFrame(series_list)
         all_metrics_df.to_csv(os.path.join(self.test_savedir, 'all_metrics.csv'))
 
