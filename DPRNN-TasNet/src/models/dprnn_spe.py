@@ -86,7 +86,7 @@ class DPRNNSpe(DPRNN):
         # fusion
         if fusion_type == 'cat':
             start_conv1d = nn.Conv1d(input_size + embeddings_size, feature_size, 1)
-        if fusion_type == 'add' or fusion_type == 'mul':
+        if fusion_type in ('add', 'mul'):
             self.fusion_linear = nn.Linear(embeddings_size, input_size)
             start_conv1d = nn.Conv1d(input_size, feature_size, 1)
         if fusion_type == 'film':
