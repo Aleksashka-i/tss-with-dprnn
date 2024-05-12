@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --gpus=1
 #SBATCH --time=0-24:0
-#SBATCH --output="test_spe.out"
+#SBATCH --output="test_spe_add.out"
 
 
 # Executable

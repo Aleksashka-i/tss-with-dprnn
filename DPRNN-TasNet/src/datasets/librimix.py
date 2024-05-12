@@ -26,7 +26,7 @@ class Librimix(Dataset):
         segment: int.
         return_id: bool.
     '''
-    def __init__(self, csv_path, sample_rate, nrows=None, segment=3, return_id=False):
+    def __init__(self, csv_path, sample_rate, n_src, nrows=None, segment=3, return_id=False):
         self.csv_path = csv_path
         self.sample_rate = sample_rate
         self.segment = segment
@@ -84,6 +84,9 @@ class Librimix(Dataset):
             return mixture, sources
         id1, id2 = mixture_path.split('/')[-1].split('.')[0].split('_')
         return mixture, sources, [id1, id2]
+    
+    def to_csv(self, output_path, index=False):
+        self.df.to_csv(output_path, index=index)
 
     @classmethod
     def loaders_from_mini(cls, batch_size=4, nrows=None, **kwargs):

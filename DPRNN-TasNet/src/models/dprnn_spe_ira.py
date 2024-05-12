@@ -18,7 +18,7 @@ class DPRNNSpeIRA(DPRNNSpe):
         norm_type: string, 'gLN' or 'ln'.
         activation_type: string, 'sigmoid' or 'relu'.
         dropout: float.
-        mid_resnet_size: int.
+        P: int.
         embeddings_size: int.
         num_spks: int.
         kernel_size: int.
@@ -26,8 +26,9 @@ class DPRNNSpeIRA(DPRNNSpe):
     def __init__(self, input_size, feature_size=128, hidden_size=128,
                  chunk_length=200, hop_length=None, n_repeats=6,
                  bidirectional=True, rnn_type='LSTM', norm_type='gLN',
-                 activation_type='sigmoid', dropout=0, mid_resnet_size=256,
-                 embeddings_size=128, num_spks=251, kernel_size=2):
+                 activation_type='sigmoid', dropout=0, O=128, P=256,
+                 embeddings_size=128, num_spks=251, kernel_size=2,
+                 fusion_type='cat'):
         super().__init__(
             input_size,
             feature_size,
@@ -40,12 +41,13 @@ class DPRNNSpeIRA(DPRNNSpe):
             norm_type,
             activation_type,
             dropout,
-            mid_resnet_size,
+            O,
+            P,
             embeddings_size,
             num_spks,
             kernel_size,
+            fusion_type,
         )
-        self.embeddings_size = embeddings_size
         self.aux_linear = nn.Linear(2 * embeddings_size, embeddings_size)
 
     def forward(self, input, aux, aux_len):
@@ -129,7 +131,7 @@ class DPRNNSpeIRATasNet(nn.Module):
         activation_type: string, 'sigmoid' or 'relu'.
         dropout: float.
         stride: int.
-        mid_resnet_size: int.
+        P: int.
         embeddings_size: int.
         num_spks: int.
     '''
@@ -137,8 +139,8 @@ class DPRNNSpeIRATasNet(nn.Module):
                  chunk_length=200, kernel_size=2, hop_length=None,
                  n_repeats=6, bidirectional=True, rnn_type='LSTM',
                  norm_type='gLN', activation_type='sigmoid', dropout=0,
-                 stride=None, mid_resnet_size=256, embeddings_size=128,
-                 num_spks=251):
+                 stride=None, O=128, P=256, embeddings_size=128,
+                 num_spks=251, fusion_type='cat'):
         super().__init__()
         self.stride = stride if stride is not None else kernel_size // 2
         self.encoder = Encoder(
@@ -159,10 +161,12 @@ class DPRNNSpeIRATasNet(nn.Module):
             norm_type,
             activation_type,
             dropout,
-            mid_resnet_size,
+            O,
+            P,
             embeddings_size,
             num_spks,
             kernel_size,
+            fusion_type,
         )
         self.decoder = Decoder(
             in_channels=input_size,

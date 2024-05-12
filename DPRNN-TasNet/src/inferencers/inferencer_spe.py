@@ -1,3 +1,4 @@
+import sys
 import time
 import pandas as pd
 
@@ -7,8 +8,15 @@ import torch
 
 from src.inferencers.inferencer import Inferencer
 
+sys.path.append('../../')
+from src.reporters.reporter import Reporter
+
 class InferencerSpe(Inferencer):
     ''' Inferencer (Spe) class. '''
+    def __init__(self, model, logger, config, reporter: Reporter):
+        super().__init__(model, logger, config)
+        self.reporter = reporter
+
     def run(self, test_set):
         series_list = []
 
@@ -33,6 +41,7 @@ class InferencerSpe(Inferencer):
                 sample_rate=self.sample_rate,
                 metrics_list=self.metrics,
             )
+            self.add_result(idx, mix, target, est.squeeze(0), reference, metrics)
             series_list.append(pd.Series(metrics))
         end_time = time.time()
 
@@ -40,4 +49,20 @@ class InferencerSpe(Inferencer):
             (end_time - start_time) / 60
         )
         self.logger.info(message)
-        self._save_result(series_list)
+        final_results = self._save_result(series_list)
+
+        self.reporter.add_and_report(logs=pd.DataFrame([final_results]), mode='test_final')
+    
+    def add_result(self, idx, mix, target, estimated, reference, cur_metrics):
+        logs = {}
+        logs['id'] = idx
+        logs['mix'] = mix
+        logs['target'] = target
+        logs['estimated'] = estimated
+        logs['reference'] = reference
+        for metric_name in self.metrics:
+            input_metric_name = 'input_' + metric_name
+            ldf = cur_metrics[metric_name] - cur_metrics[input_metric_name]
+            logs[metric_name] = cur_metrics[metric_name]
+            logs[metric_name + '_imp'] = ldf
+        self.reporter.add_and_report(logs=logs, mode='test')

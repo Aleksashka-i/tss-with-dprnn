@@ -5,6 +5,7 @@ class Reporter:
     def __init__(self, config, logger):
         self.logger = logger
         self.sample_rate = config['sample_rate']
+        self.is_test = config['is_test']
         try:
             self.wandb_credentials = config['logs']['wandb_credentials']
         except:
@@ -19,6 +20,10 @@ class Reporter:
                 name=self.wandb_credentials['run_name'],
                 config=dict(config)
             )
+        if self.is_test:
+            columns = ['mix_id', 'mix', 'target', 'estimated', 'reference',
+                       'si-sdr', 'stoi', 'pesq', 'si-sdr_imp', 'stoi_imp', 'pesq_imp']
+            self.test_table = wandb.Table(columns=columns)
 
     def wandb_format_name(self, name):
         return f'{name}_{self.mode}'
@@ -33,6 +38,9 @@ class Reporter:
         return wandb.Audio(audio, sample_rate=self.sample_rate)
 
     def wandb_finish(self):
+        if self.is_test:
+            self.logger.info('ADDING TEST TABLE!')
+            wandb.log({'test results: ': self.test_table})
         wandb.finish()
 
     def add_and_report(self, logs=None, mode='train'):
@@ -53,6 +61,19 @@ class Reporter:
                 metrics = logs['metrics']
                 for metric in logs['metrics']:
                     wandb.log(self.wandb_format_number(metric, metrics[metric]), step=logs['step'])
+        
+        if self.mode == 'test':
+            mix = self.wandb_format_audio(logs['mix'])
+            target = self.wandb_format_audio(logs['target'])
+            estimated = self.wandb_format_audio(logs['estimated'])
+            reference = self.wandb_format_audio(logs['reference'])
+            self.test_table.add_data(logs['id'], mix, target, estimated, reference,
+                                     logs['si_sdr'], logs['stoi'], logs['pesq'],
+                                     logs['si_sdr_imp'], logs['stoi_imp'], logs['pesq_imp'])
+        
+        if self.mode == 'test_final':
+            self.logger.info('ADDING FINAL RESULTS!')
+            wandb.log({'final results: ': wandb.Table(dataframe=logs)})
 
         if self.mode == 'inference':
             self.logger.info('INFERENCE!')

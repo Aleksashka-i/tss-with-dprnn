@@ -17,39 +17,48 @@ def main(config: DictConfig):
 
     logger.info('RUN %s', config['name'])
     dataset_cls = Librimix if config['data']['dataset_type'] == 'Librimix' else LibrimixSpe
-    logger.info('Initializing Datasets {}....'.format(dataset_cls))
-
-    train_set = dataset_cls(
-        csv_path=config['data']['train_path'],
-        sample_rate=config['sample_rate'],
-        nrows=config['data']['nrows_train'],
-        segment=config['data']['segment'],
-    )
-    logger.info('train len {}'.format(len(train_set)))
-    eval_set = dataset_cls(
-        csv_path=config['data']['eval_path'],
-        sample_rate=config['sample_rate'],
-        nrows=config['data']['nrows_eval'],
-        segment=config['data']['segment'],
-    )
-    logger.info('eval len {}'.format(len(eval_set)))
-    test_set = dataset_cls(
-        csv_path=config['data']['test_path'],
-        sample_rate=config['sample_rate'],
-        nrows=config['data']['nrows_test'],
-        segment=None,
-    )
-    logger.info('test len {}'.format(len(test_set)))
-    logger.info('OK')
-
-    logger.info('Saving datasets....')
-    with open(config['save_path']['train'], 'wb') as f:
-        pkl.dump(train_set, f)
-    with open(config['save_path']['eval'], 'wb') as f:
-        pkl.dump(eval_set, f)
-    with open(config['save_path']['test'], 'wb') as f:
-        pkl.dump(test_set, f)
-    logger.info('OK')
+    
+    if config['data']['train_path'] is not None:
+        logger.info('Initializing train dataset {}....'.format(dataset_cls))
+        train_set = dataset_cls(
+            csv_path=config['data']['train_path'],
+            sample_rate=config['sample_rate'],
+            nrows=config['data']['nrows_train'],
+            segment=config['data']['segment'],
+            n_src=config['data']['n_src'],
+        )
+        logger.info('train len {}'.format(len(train_set)))
+        logger.info('Saving dataset....')
+        with open(config['save_path']['train'], 'wb') as f:
+            pkl.dump(train_set, f)
+        logger.info('OK')
+    if config['data']['eval_path'] is not None: 
+        logger.info('Initializing eval dataset {}....'.format(dataset_cls))
+        eval_set = dataset_cls(
+            csv_path=config['data']['eval_path'],
+            sample_rate=config['sample_rate'],
+            nrows=config['data']['nrows_eval'],
+            segment=config['data']['segment'],
+            n_src=config['data']['n_src'],
+        )
+        logger.info('eval len {}'.format(len(eval_set)))
+        logger.info('Saving dataset....')
+        with open(config['save_path']['eval'], 'wb') as f:
+            pkl.dump(eval_set, f)
+        logger.info('OK')
+    if config['data']['test_path'] is not None: 
+        test_set = dataset_cls(
+            csv_path=config['data']['test_path'],
+            sample_rate=config['sample_rate'],
+            nrows=config['data']['nrows_test'],
+            segment=None,
+            n_src=config['data']['n_src'],
+        )
+        logger.info('test len {}'.format(len(test_set)))
+        logger.info('Saving dataset....')
+        with open(config['save_path']['test'], 'wb') as f:
+            pkl.dump(test_set, f)
+        logger.info('OK')
 
 if __name__ == '__main__':
     main()

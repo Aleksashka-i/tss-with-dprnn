@@ -13,7 +13,7 @@ class Inferencer:
     def __init__(self, model, logger, config):
         self.logger = logger
         self.sample_rate = config['sample_rate']
-        self.metrics = ['si_sdr', 'sdr', 'sir', 'sar', 'stoi', 'pesq']
+        self.metrics = ['si_sdr', 'stoi', 'pesq']
         self.test_savedir = config['test_savedir']
 
         # choosing the device
@@ -75,7 +75,7 @@ class Inferencer:
             (end_time - start_time) / 60
         )
         self.logger.info(message)
-        self._save_result(series_list)
+        _ = self._save_result(series_list)
 
     def _save_result(self, series_list):
         all_metrics_df = pd.DataFrame(series_list)
@@ -93,3 +93,5 @@ class Inferencer:
 
         with open(os.path.join(self.test_savedir, 'final_metrics.json'), 'w') as f:
             json.dump(final_results, f, indent=0)
+        
+        return final_results

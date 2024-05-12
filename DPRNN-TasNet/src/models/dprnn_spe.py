@@ -3,6 +3,7 @@ from torch import nn
 from src.models.encoder_decoder import Encoder, Decoder
 from src.models import norms
 from src.models.dprnn import DPRNN
+import torch.nn.functional as F
 
 class ResBlock(nn.Module):
     ''' Resnet block for speaker encoder to obtain speaker embedding.
@@ -55,7 +56,7 @@ class DPRNNSpe(DPRNN):
         norm_type: string, 'gLN' or 'ln'.
         activation_type: string, 'sigmoid' or 'relu'.
         dropout: float.
-        mid_resnet_size: int.
+        P: int.
         embeddings_size: int.
         num_spks: int.
         kernel_size: int.
@@ -64,7 +65,7 @@ class DPRNNSpe(DPRNN):
     def __init__(self, input_size, feature_size=128, hidden_size=128,
                  chunk_length=200, hop_length=None, n_repeats=6,
                  bidirectional=True, rnn_type='LSTM', norm_type='gLN',
-                 activation_type='sigmoid', dropout=0, mid_resnet_size=256,
+                 activation_type='sigmoid', dropout=0, O=128, P=256,
                  embeddings_size=128, num_spks=251, kernel_size=2,
                  fusion_type='cat'):
         super().__init__(
@@ -93,6 +94,14 @@ class DPRNNSpe(DPRNN):
             self.fusion_linear_1 = nn.Linear(embeddings_size, input_size)
             self.fusion_linear_2 = nn.Linear(embeddings_size, input_size)
             start_conv1d = nn.Conv1d(input_size, feature_size, 1)
+        if fusion_type == 'att':
+            self.fusion_linear = nn.Linear(embeddings_size, input_size)
+            self.average = nn.Conv1d(input_size, input_size, kernel_size, kernel_size, groups=input_size)
+            self.average.weight = nn.Parameter(torch.ones(input_size, 1, kernel_size) / kernel_size)
+            self.average.bias = nn.Parameter(torch.zeros(input_size))
+            for p in self.average.parameters():
+                p.requires_grad = False
+            start_conv1d = nn.Conv1d(input_size, feature_size, 1)
 
         # bottleneck
         if norm_type == 'gLN':
@@ -104,11 +113,11 @@ class DPRNNSpe(DPRNN):
         # target
         self.spk_encoder = nn.Sequential(
             nn.GroupNorm(1, input_size),
-            nn.Conv1d(input_size, feature_size, 1),
-            ResBlock(feature_size, feature_size),
-            ResBlock(feature_size, mid_resnet_size),
-            ResBlock(mid_resnet_size, mid_resnet_size),
-            nn.Conv1d(mid_resnet_size, embeddings_size, 1),
+            nn.Conv1d(input_size, O, 1),
+            ResBlock(O, O),
+            ResBlock(O, P),
+            ResBlock(P, P),
+            nn.Conv1d(P, embeddings_size, 1),
         )
         self.pred_linear = nn.Linear(embeddings_size, num_spks)
 
@@ -165,6 +174,12 @@ class DPRNNSpe(DPRNN):
         if self.fusion_type == 'film':
             output = self._film(aux, output, L)
             # -> [B, N(input_size), L]
+        if self.fusion_type == 'att':
+            output_avg = self.average(output)
+            att_out = self._attention(aux, output_avg, self.fusion_linear)
+            upsampling = nn.Upsample(size=L, mode='nearest')
+            att_out = upsampling(att_out)
+            output = output * att_out
         return output
 
     def _concatenation(self, aux, output, L):
@@ -194,6 +209,16 @@ class DPRNNSpe(DPRNN):
         output = output * aux_mul
         # -> [B, N(input_size, L]
         return output
+    
+    def _attention(self, aux, output, fusion_linear):
+        L = output.shape[-1]
+        aux_att = fusion_linear(aux) 
+        aux_att = torch.unsqueeze(aux_att, -1)
+        aux_att = aux_att.repeat(1, 1, L)
+        att = torch.sum(output * aux_att, 1, keepdim=True) 
+        att = F.softmax(att, -1)
+        att = att * aux_att
+        return att + aux_att 
 
     def _film(self, aux, output, L):
         output = self._multiplication(aux, output, L, self.fusion_linear_1)
@@ -238,7 +263,7 @@ class DPRNNSpeTasNet(nn.Module):
         activation_type: string, 'sigmoid' or 'relu'.
         dropout: float.
         stride: int.
-        mid_resnet_size: int.
+        P: int.
         embeddings_size: int.
         num_spks: int.
         fusion_type: string, 'cat', 'add', 'mul' or 'film'.
@@ -247,7 +272,7 @@ class DPRNNSpeTasNet(nn.Module):
                  chunk_length=200, kernel_size=2, hop_length=None,
                  n_repeats=6, bidirectional=True, rnn_type='LSTM',
                  norm_type='gLN', activation_type='sigmoid', dropout=0,
-                 stride=None, mid_resnet_size=256, embeddings_size=128,
+                 stride=None, O=128, P=256, embeddings_size=128,
                  num_spks=251, fusion_type='cat'):
         super().__init__()
         self.stride = stride if stride is not None else kernel_size // 2
@@ -269,7 +294,8 @@ class DPRNNSpeTasNet(nn.Module):
             norm_type,
             activation_type,
             dropout,
-            mid_resnet_size,
+            O,
+            P,
             embeddings_size,
             num_spks,
             kernel_size,
@@ -286,7 +312,6 @@ class DPRNNSpeTasNet(nn.Module):
     def forward(self, input, aux, aux_len):
         # input: [B, L]
         # aux: [B, L]
-
         encoders = self.encoder(input)
         # -> [B, N, L]
         embeddings = self.encoder(aux)
