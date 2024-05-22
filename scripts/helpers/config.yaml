@@ -1,0 +1,20 @@
+---
+name: generate_datasets
+
+data:
+  dataset_type: LibrimixSpe 
+  train_path: ../../Libri2Mix/wav8k/min/metadata/mixture_train-100_mix_clean.csv
+  eval_path:
+  test_path:
+  nrows_train: 900
+  nrows_test:
+  nrows_eval:
+  segment: 1
+  n_src: 2
+
+save_path:
+  train: ../../datasets/train_set_spe_1sec.pkl
+  eval:
+  test:
+
+sample_rate: 8000

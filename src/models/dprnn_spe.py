@@ -56,6 +56,7 @@ class DPRNNSpe(DPRNN):
         norm_type: string, 'gLN' or 'ln'.
         activation_type: string, 'sigmoid' or 'relu'.
         dropout: float.
+        O: int.
         P: int.
         embeddings_size: int.
         num_spks: int.
@@ -263,6 +264,7 @@ class DPRNNSpeTasNet(nn.Module):
         activation_type: string, 'sigmoid' or 'relu'.
         dropout: float.
         stride: int.
+        O: int.
         P: int.
         embeddings_size: int.
         num_spks: int.

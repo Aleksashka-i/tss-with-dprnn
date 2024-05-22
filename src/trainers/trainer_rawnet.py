@@ -1,11 +1,20 @@
 import time
 
 import torch
+import torchaudio.transforms as T
 
+from src.reporters.reporter import Reporter
 from src.trainers.trainer import Trainer
 
-class TrainerNoRef(Trainer):
-    ''' Trainer (with no reference) class. '''
+class TrainerRawNet(Trainer):
+    ''' Trainer (spe) class. '''
+    def __init__(self, model, logger, eval_mixtures, reporter: Reporter, config):
+        super().__init__(model, logger, eval_mixtures, reporter, config)
+        self.ce_gamma = config['ce_gamma']
+        sample_rate = 8000
+        resample_rate = 16000
+        self.resampler = T.Resample(sample_rate, resample_rate, dtype=torch.float32)
+
     def train(self, dataloader):
         self.logger.info('Set train mode...')
         self.model.train()
@@ -18,16 +27,21 @@ class TrainerNoRef(Trainer):
         metric_cnt = 0
 
         start_time = time.time()
-        for step, (mix, target) in enumerate(dataloader):
+        for step, (mix, target, reference, spk_idx) in enumerate(dataloader):
+            reference = self.resampler(reference)
+            
             mix_device = mix.to(self.device)
-            target = target[:, 0:1, :]
             target_device = target.to(self.device)
+            reference_device = reference.to(self.device)
+            spk_idx = spk_idx.to(self.device)
             self.optimizer.zero_grad()
-            out = self.model(mix_device)
-            est = out[:, 0:1, :]
+            est, aux = self.model(mix_device, reference_device)
 
-            l = self.loss_module(est, target_device)
-            epoch_loss = l
+            l = self.loss_module(est.unsqueeze(1), target_device.unsqueeze(1))
+            ce = torch.nn.CrossEntropyLoss()
+            ce_loss = ce(aux, spk_idx)
+
+            epoch_loss = l + self.ce_gamma * ce_loss
             total_loss += epoch_loss.item()
             epoch_loss.backward()
 
@@ -43,6 +57,7 @@ class TrainerNoRef(Trainer):
             self.optimizer.step()
 
             if step % self.print_freq == 0:
+                self.logger.info('l: {}, ce: {}'.format(l, ce_loss))
                 self._log_step(step, total_loss)
         end_time = time.time()
 
@@ -70,15 +85,16 @@ class TrainerNoRef(Trainer):
 
         start_time = time.time()
         with torch.no_grad():
-            for step, (mix, target) in enumerate(dataloader):
+            for step, (mix, target, reference, _) in enumerate(dataloader):
+                reference = self.resampler(reference)
+
                 mix = mix.to(self.device)
-                target = target[:, 0:1, :]
                 target = target.to(self.device)
+                reference = reference.to(self.device)
 
-                out = self.model(mix)
-                est = out[:, 0:1, :]
+                est, _ = self.model(mix, reference)
 
-                l = self.loss_module(est, target)
+                l = self.loss_module(est.unsqueeze(1), target.unsqueeze(1))
                 epoch_loss = l
                 total_loss += epoch_loss.item()
 
@@ -110,13 +126,15 @@ class TrainerNoRef(Trainer):
                 mix_id = self.eval_mixtures[id]
 
                 mix = mix_id['mix'].unsqueeze(0)
+                reference = mix_id['reference'].unsqueeze(0)
+                reference = self.resampler(reference)
 
                 mix = mix.to(self.device)
-                est = self.model(mix)
-                est = est[:, 0:1, :]
+                reference = reference.to(self.device)
+                est, _ = self.model(mix, reference)
 
-                self.eval_mixtures[id]['estimated'] = est.squeeze(0).squeeze(0)
+                self.eval_mixtures[id]['estimated'] = est.squeeze(0)
             logs={}
             logs['step'] = self.cur_epoch
             logs['mixtures'] = self.eval_mixtures
-            self.reporter.add_and_report(logs=logs, mode='inference_no_target')
+            self.reporter.add_and_report(logs=logs, mode='inference_spe')
