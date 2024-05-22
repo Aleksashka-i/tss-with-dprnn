@@ -2,8 +2,8 @@ import torch
 from torch import nn
 from src.models.encoder_decoder import Encoder, Decoder
 from src.models.dprnn_spe import DPRNNSpe
-from src.models.RawNet3 import RawNet3
-from src.models.RawNetBasicBlock import Bottle2neck
+from src.models.rawnet.RawNet3 import RawNet3
+from src.models.rawnet.RawNetBasicBlock import Bottle2neck
 import torch.nn.functional as F
 
 class DPRNNRawNet(DPRNNSpe):
