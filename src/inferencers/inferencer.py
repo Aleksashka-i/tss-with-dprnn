@@ -12,7 +12,7 @@ class Inferencer:
     ''' Inferencer class. '''
     def __init__(self, model, logger, config):
         self.logger = logger
-        self.sample_rate = config['sample_rate']
+        self.sample_rate = config['data']['sample_rate']
         self.metrics = ['si_sdr', 'stoi', 'pesq']
         self.test_savedir = config['test_savedir']
 

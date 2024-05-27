@@ -173,7 +173,7 @@ def get_train_spe_dataloader(config):
     else:
         train_set = LibrimixSpe(
             csv_path=config['data']['train_path'],
-            sample_rate=config['sample_rate'],
+            sample_rate=config['data']['sample_rate'],
             nrows=config['data']['nrows_train'],
             segment=config['data']['segment'],
         )
@@ -193,7 +193,7 @@ def get_eval_spe_dataloader(config):
     else:
         eval_set = LibrimixSpe(
             csv_path=config['data']['valid_path'],
-            sample_rate=config['sample_rate'],
+            sample_rate=config['data']['sample_rate'],
             nrows=config['data']['nrows_valid'],
             segment=config['data']['segment'],
         )

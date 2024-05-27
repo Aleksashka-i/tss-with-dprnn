@@ -4,7 +4,7 @@ class Reporter:
     ''' Reporter class. '''
     def __init__(self, config, logger):
         self.logger = logger
-        self.sample_rate = config['sample_rate']
+        self.sample_rate = config['data']['sample_rate']
         self.is_test = config['is_test']
         try:
             self.wandb_credentials = config['logs']['wandb_credentials']

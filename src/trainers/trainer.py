@@ -21,7 +21,7 @@ class Trainer:
         self.cur_epoch = config['cur_epoch']
         self.print_freq = config['print_freq']
         self.eval_mixtures = eval_mixtures # displayed in audio inference table in wandb
-        self.sample_rate = config['sample_rate']
+        self.sample_rate = config['data']['sample_rate']
         self.metrics = ['si_sdr', 'pesq', 'stoi']
         self.is_metrics = config['is_metrics']
 
