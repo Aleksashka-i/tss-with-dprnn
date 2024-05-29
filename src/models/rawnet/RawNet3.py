@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from asteroid_filterbanks import Encoder, ParamSincFB
 
-from src.models.RawNetBasicBlock import Bottle2neck, PreEmphasis
+from src.models.rawnet.RawNetBasicBlock import Bottle2neck, PreEmphasis
 
 
 class RawNet3(nn.Module):
@@ -46,7 +46,7 @@ class RawNet3(nn.Module):
             attn_input = 1536 * 3
         else:
             attn_input = 1536
-        print("self.encoder_type", self.encoder_type)
+
         if self.encoder_type == "ECA":
             attn_output = 1536
         elif self.encoder_type == "ASP":

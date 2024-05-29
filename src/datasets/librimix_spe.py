@@ -1,8 +1,12 @@
+import os
 import random
+import shutil
+import zipfile
 import pickle as pkl
 import pandas as pd
 
 import torch
+from torch import hub
 from torch.utils.data import DataLoader
 import soundfile as sf
 
@@ -155,16 +159,53 @@ class LibrimixSpe(Librimix):
         return target_row['source_path'].item()
 
     @classmethod
-    def loaders_from_mini(cls, batch_size=4, nrows=None, **kwargs):
-        raise NotImplementedError
+    def loaders_from_mini(cls, batch_size=4, nrows=None, segment=3, **kwargs):
+        ''' Downloads MiniLibriMix and returns train and validation DataLoader. '''
+        val_set = cls.mini_from_download(nrows=nrows, segment=segment, **kwargs)
+        val_loader = DataLoader(val_set, batch_size=batch_size, drop_last=True)
+        return val_loader
 
     @classmethod
-    def mini_from_download(cls, nrows=None, **kwargs):
-        raise NotImplementedError
+    def mini_from_download(cls, nrows=None, segment=3, **kwargs):
+        ''' Downloads MiniLibriMix and returns train and validation Dataset. '''
+        assert 'csv_dir' not in kwargs, 'Cannot specify csv_dir when downloading.'
+        assert kwargs.get('task', 'sep_clean') in [
+            'sep_clean',
+            'sep_noisy',
+        ], 'Only clean and noisy separation are supported in MiniLibriMix.'
+        assert (
+            kwargs.get('sample_rate', 8000) == 8000
+        ), 'Only 8kHz sample rate is supported in MiniLibriMix.'
+        # Download LibriMix in current directory
+        meta_path = cls.mini_download()
+        # Create dataset instances
+        val_set = cls(os.path.join(meta_path, 'val/mixture_val_mix_clean.csv'),
+                      sample_rate=8000, n_src=2, nrows=nrows, segment=segment)
+        return val_set
 
     @staticmethod
     def mini_download():
-        raise NotImplementedError
+        ''' Downloads MiniLibriMix from Zenodo in current directory.
+            Returns the path to the metadata directory.
+        '''
+        mini_dir = './MiniLibriMix/'
+        os.makedirs(mini_dir, exist_ok=True)
+        zip_path = mini_dir + 'MiniLibriMix.zip'
+        if not os.path.isfile(zip_path):
+            hub.download_url_to_file(MINI_URL, zip_path)
+        cond = all(os.path.isdir('MiniLibriMix/' + f) for f in ['val', 'metadata'])
+        if not cond:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall('./')
+        src = 'MiniLibriMix/metadata/'
+        dst = f'MiniLibriMix/metadata/val/'
+        os.makedirs(dst, exist_ok=True)
+        [
+            shutil.copyfile(src + f, dst + f)
+            for f in os.listdir(src)
+            if 'val' in f and os.path.isfile(src + f)
+        ]
+        return './MiniLibriMix/metadata'
 
 def get_train_spe_dataloader(config):
     if config['data']['use_generated_train'] is not None:
