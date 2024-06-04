@@ -24,7 +24,7 @@ model:
   dropout: 0
   O: 128 # int, resnet parameter
   P: 256 # int, resnet parameter
-  embeddings_size: 256 # int, size of the embeddings
+  embeddings_size: 128  # int, size of the embeddings (256 if using the DPRNN-RawNet model)
   num_spks: 251 # int, number of speakers in train
   fusion_type: att # str, type of fusion ('add', 'att', 'cat', 'film' or 'mul')
 

@@ -22,7 +22,21 @@ The library scheme is available in TODO.
 
 The Libri2Mix dataset (`train-100`, `dev`, `test`) was used for training, validation, and testing. A randomly selected audio was used as a reference in the TSS task, which was different from the target one but contained the voice of the same speaker. The dataset is available on Kaggle, and the `.pkl` file can be found in the `datasets` folder.
 
-All audio recordings have a sample rate of 8 kHz. The dataset was generated in `min` mode.
+All audio recordings have a sample rate of 8 kHz. The dataset was generated in `min` mode. For training 3-seconds audios (mix and reference) were used. Foe testing the full length (mix and reference) was applied.
+
+## Results
+All of the test metrics are available in `metrics` fodler, here is an overview:
+
+|Model               | SI-SDR | PESQ | STOI |
+|:-------------------|:------:|:----:|:----:|
+| DPRNN-TasNet (BSS) | 15.76  | 3.15 | 0.93 |
+| DPRNN-Spe-IRA (cat)| 13.49  | 3.04 | 0.90 |
+| DPRNN-Rawnet (att) | 12.56  | 2.77 | 0.89 |
+| DPRNN-Spe (add)    | 11.95  | 2.86 | 0.88 |
+| DPRNN-Spe (att)    | 13.29  | 2.99 | 0.90 |
+| DPRNN-Spe (cat)    | 13.12  | 2.99 | 0.89 |
+| DPRNN-Spe (mul)    | 12.79  | 2.83 | 0.89 |
+| DPRNN-Spe (film)   | 12.97  | 2.97 | 0.89 |
 
 ## Running
 ### Installation
