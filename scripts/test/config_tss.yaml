@@ -1,0 +1,39 @@
+---
+name: test_tss
+is_test: True # bool, flag indicating if this is a test run (True) or not (False) for report
+
+data:
+  use_generated_test: # str, path to the pre-saved test dataset (.pkl file)
+  test_path: # str, path to the test data (if use_generated_test is not used)
+  nrows_test: # int, number of mixtures in the test set
+  segment: # int or null, length of segments in the test data (in seconds)
+  sample_rate: 8000 # int, sample rate of the data
+
+model:
+  _target_: src.models.dprnn_spe.DPRNNSpeTasNet # str, model class name
+  input_size: 64
+  feature_size: 128
+  hidden_size: 128
+  chunk_length: 250
+  kernel_size: 2
+  hop_length: 125
+  n_repeats: 6
+  bidirectional: True
+  norm_type: ln # str, type of normalization ('gLN' or 'ln')
+  activation_type: sigmoid # str, type of activation ('sigmoid' or 'relu')
+  dropout: 0
+  O: 128 # int, resnet parameter
+  P: 256 # int, resnet parameter
+  embeddings_size: 128  # int, size of the embeddings (256 if using the DPRNN-RawNet model)
+  num_spks: 251 # int, number of speakers in train
+  fusion_type: att # str, type of fusion ('add', 'att', 'cat', 'film' or 'mul')
+
+checkpoint_path: # str, path to the model checkpoint
+test_savedir: ../../metrics/dprnn-spe/ # str, path where metrics will be saved
+
+logs:
+  wandb_credentials:
+    wandb_project: # str, wandb project name
+    wandb_entity: # str, wandb username
+    wandb_key: # str, wandb API key
+    run_name: report # str, name of the run in wandb

@@ -1,0 +1,68 @@
+---
+name: train_tss
+is_test: False # bool, flag indicating if this is a test run (True) or not (False) (for report)
+
+data:
+  use_generated_train:  # str, path to the pre-saved train dataset (.pkl file)
+  use_generated_eval:  # str, path to the pre-saved eval dataset (.pkl file)
+  train_path:  # str, path to the train data (if  generated is not used)
+  eval_path:  # str, path to the eval data (if generated is not used)
+  nrows_train:  # int, number of mixtures in the train set
+  nrows_eval:  # int, number of mixtures in the eval set
+  segment:  # int, length of segments in the train/eval data (in seconds)
+  num_workers: 1
+  batch_size: 5
+  sample_rate: 8000 # int, sample rate of the data
+
+model:
+  _target_: src.models.dprnn_spe.DPRNNSpeTasNet # str, model class name
+  input_size: 64
+  feature_size: 128
+  hidden_size: 128
+  chunk_length: 250
+  kernel_size: 2
+  hop_length: 125
+  n_repeats: 6
+  bidirectional: True
+  norm_type: ln  # str, type of normalization ('gLN' or 'ln')
+  activation_type: sigmoid  # str, type of activation ('sigmoid' or 'relu')
+  dropout: 0 
+  O: 128  # int, resnet parameter
+  P: 256  # int, resnet parameter
+  embeddings_size: 128  # int, size of the embeddings (256 if using the DPRNN-RawNet model)
+  num_spks: 251  # int, number of speakers in train
+  fusion_type: att  # str, type of fusion ('add', 'att', 'cat', 'film', or 'mul')
+
+optimizer:
+  _target_: torch.optim.Adam
+  lr:  0.0005
+  weight_decay: !!float 1e-5
+
+lr_scheduler:
+  patience: 2
+  factor: 0.5
+  decay_rate: null
+
+logs:
+  metadata: 
+    ids: # list of int, IDs of eval mixtures for inference in wandb
+      - 14
+      - 516
+      - 2899
+  wandb_credentials:
+    wandb_project:  # str, wandb project name
+    wandb_entity:  # str, wandb username
+    wandb_key:  # str, wandb API key
+    run_name: report  # str, name of the run in wandb
+
+print_freq: 5  # int, frequency of log printing (number of iterations)
+clip_norm: 5  # int, gradient clipping value
+cur_epoch: 0  # int, starting epoch
+epochs: 10  # int, number of training epochs
+early_stop: 10  # int, number of epochs without improvement before stopping
+is_metrics: False  # bool, if True, additionally measures PESQ and STOI metrics (logged to wandb)
+ce_gamma: 0.5  # float, coefficient for cross-entropy loss contribution
+
+checkpoint_path: # str, path to model checkpoint (if available)
+n_checkpoints: 1000  # int, maximum number of checkpoints to keep in the folder
+new_checkpoints_path: ../../chkpts/dprnn-spe/  # str, path where new checkpoints will be saved
