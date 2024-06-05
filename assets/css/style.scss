@@ -1,0 +1,18 @@
+---
+---
+
+// Breakpoints
+$large-breakpoint: 100em !default;
+$medium-breakpoint: 80em !default;
+
+@import "{{ site.theme }}";
+
+.main-content {
+
+  @include large {
+    max-width: 100rem;
+    padding: 2rem 6rem;
+    margin: 0 auto;
+    font-size: 1.1rem;
+  }
+}
