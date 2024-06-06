@@ -19,27 +19,27 @@ The estimated audio samples were obtained using the DPRNN-Spe model. Below are e
 ## Close-up examples
 Below are close-up examples of different fusion types:
 
-| <center>Target</center> | <center>Addition</center> | 
+| <center>Target</center> | <center>Concatenation</center> | 
 | :---: | :---: |
-|<audio src="audio/target.wav" controls preload></audio>|<audio src="audio/estimated_spe_add.wav" controls preload></audio>|
-|<img src="spectrograms/target.png"/>|<img src="spectrograms/estimated_spe_add.png"/>|
+|<audio src="audio/target.wav" controls preload></audio>|<audio src="audio/estimated_spe_cat.wav" controls preload></audio>|
+|<img src="spectrograms/target.png"/>|<img src="spectrograms/estimated_spe_cat.png"/>|
 
 | <center>Target</center> | <center>Attention</center> |
 | :---: | :---: |
 |<audio src="audio/target.wav" controls preload></audio>|<audio src="audio/estimated_spe_att.wav" controls preload></audio>|
 |<img src="spectrograms/target.png"/>|<img src="spectrograms/estimated_spe_att.png"/>|
 
-| <center>Target</center> | <center>Concatenation</center> |
+| <center>Target</center> | <center>Multiplicatio</center> |
 | :---: | :---: |
-|<audio src="audio/target.wav" controls preload></audio>|<audio src="audio/estimated_spe_cat.wav" controls preload></audio>|
-|<img src="spectrograms/target.png"/>|<img src="spectrograms/estimated_spe_cat.png"/>|
+|<audio src="audio/target.wav" controls preload></audio>|<audio src="audio/estimated_spe_mul.wav" controls preload></audio>|
+|<img src="spectrograms/target.png"/>|<img src="spectrograms/estimated_spe_mul.png"/>|
 
 | <center>Target</center> | <center>FiLM</center> |
 | :---: | :---: |
 |<audio src="audio/target.wav" controls preload></audio>|<audio src="audio/estimated_spe_film.wav" controls preload></audio>|
 |<img src="spectrograms/target.png"/>|<img src="spectrograms/estimated_spe_film.png"/>|
 
-| <center>Target</center> | <center>Multiplication</center> |
+| <center>Target</center> | <center>Addition</center> |
 | :---: | :---: |
-|<audio src="audio/target.wav" controls preload></audio>|<audio src="audio/estimated_spe_mul.wav" controls preload></audio>|
-|<img src="spectrograms/target.png"/>|<img src="spectrograms/estimated_spe_mul.png"/>|
+|<audio src="audio/target.wav" controls preload></audio>|<audio src="audio/estimated_spe_add.wav" controls preload></audio>|
+|<img src="spectrograms/target.png"/>|<img src="spectrograms/estimated_spe_add.png"/>|
