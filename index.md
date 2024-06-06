@@ -18,6 +18,7 @@ The estimated audio samples were obtained using the DPRNN-Spe model. Below are e
 
 ## Close-up examples
 Below are close-up examples of different fusion types:
+
 | <center>Target</center> | <center>Addition</center> | 
 | :---: | :---: |
 |<audio src="audio/target.wav" controls preload></audio>|<audio src="audio/estimated_spe_add.wav" controls preload></audio>|
