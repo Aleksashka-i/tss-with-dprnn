@@ -1,6 +1,12 @@
 # tss-with-dprnn
 This repository is a part of my bachelor thesis: "Target Speech Separation with Dual-Path RNN."
 
+### MRE
+
+The notebook example.ipynb contains a minimal reproducible example. Since MiniLibriMix will be used, there is no need to install Libri2Mix.
+
+Additionally, a one audio demo is available at: https://aleksashka-i.github.io/tss-with-dprnn.
+
 ## Description
 
 This repository contains pre-trained models for Target Speech Separation (TSS) based on Dual-Path RNN. Below are brief descriptions of the models:
@@ -11,7 +17,7 @@ This repository contains pre-trained models for Target Speech Separation (TSS) b
 
 - **DPRNN-Spe-IRA**: An adaptation of DPRNN-Spe using the Iterative Refined Adaptation (IRA) strategy, as proposed by [Deng et al. (2022)](https://arxiv.org/abs/2011.02102).
 
-- **DPRNN-RawNet**: This model combines DPRNN-TasNet with [RawNet3](https://arxiv.org/pdf/2203.08488).
+- **DPRNN-RawNet3**: This model combines DPRNN-TasNet with [RawNet3](https://arxiv.org/pdf/2203.08488).
 
 All configuration parameters are available in the `scripts` folder. Pre-trained models are saved in the `chkpts` folder.
 
@@ -57,6 +63,3 @@ The testing script is located in the `scripts/test` folder. Refer to the configu
 ```
 python3 test.py --config-path='./' --config-name='config_tss.yaml' --mode='tss_spe'
 ```
- 
-### MRE
-Notebook `example.ipynb` contains a minimal reproducible example. As MiniLibriMix will be used, there is no need for Libri2Mix installation.
