@@ -7,7 +7,7 @@ numpy==1.26.4
 omegaconf==2.3.0
 pandas==2.2.2
 scipy==1.13.0
-setuptools==68.2.2
+setuptools==70.0.0
 soundfile==0.12.1
 torch==2.2.2
 torchaudio==2.2.2
